@@ -1,6 +1,11 @@
+using Repository;
+using Service;
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
+builder.Services.AddRepositoryLayer();
+builder.Services.AddServiceLayer();
 
 var mvcOrigins = builder.Configuration.GetSection("Frontend:MvcOrigins").Get<string[]>()
     ?? Array.Empty<string>();

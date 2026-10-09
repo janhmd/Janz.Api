@@ -13,6 +13,7 @@ public static class DependencyInjection
         services.AddValidatorsFromAssembly(typeof(DependencyInjection).Assembly);
         services.AddScoped<JwtTokenGenerator>();
         services.AddScoped<IAccountService, AccountService>();
+        services.AddScoped<IProductService, ProductService>();
         return services;
     }
 }

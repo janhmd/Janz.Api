@@ -1,3 +1,5 @@
+using Service.DTOs.Tags;
+
 namespace Service.DTOs.Products
 {
     public class ProductDto
@@ -11,5 +13,7 @@ namespace Service.DTOs.Products
         public int CategoryId { get; set; }
         public string CategoryName { get; set; } = string.Empty;
         public string CategorySlug { get; set; } = string.Empty;
+        public List<string> Images { get; set; } = new List<string>();
+        public List<TagDto> Tags { get; set; } = new List<TagDto>();
     }
 }

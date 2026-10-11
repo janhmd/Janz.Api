@@ -97,6 +97,8 @@ using (var scope = app.Services.CreateScope())
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
     await RoleSeeder.SeedAsync(roleManager);
     await ProductSeeder.SeedAsync(db);
+    await TagSeeder.SeedAsync(db);
+    await ProductImageSeeder.SeedAsync(db);
 }
 
 if (app.Environment.IsDevelopment())

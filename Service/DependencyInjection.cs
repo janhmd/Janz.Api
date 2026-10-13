@@ -14,6 +14,7 @@ public static class DependencyInjection
         services.AddScoped<JwtTokenGenerator>();
         services.AddScoped<IAccountService, AccountService>();
         services.AddScoped<IProductService, ProductService>();
+        services.AddScoped<ICartService, CartService>();
         return services;
     }
 }

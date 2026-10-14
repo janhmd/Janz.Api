@@ -13,6 +13,8 @@ public class AppDbContext : IdentityDbContext<AppUser>
     public DbSet<ProductTag> ProductTags { get; set; }
     public DbSet<ProductImage> ProductImages { get; set; }
     public DbSet<CartItem> CartItems { get; set; }
+    public DbSet<Order> Orders { get; set; }
+    public DbSet<OrderItem> OrderItems { get; set; }
 
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
     {

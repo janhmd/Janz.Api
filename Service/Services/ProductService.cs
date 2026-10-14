@@ -1,8 +1,9 @@
 using Domain.Entities;
 using Repository.Repositories.Interfaces;
-using Service.DTOs.Categories;
-using Service.DTOs.Products;
-using Service.Mappings;
+using Service.Helpers.DTOs.Categories;
+using Service.Helpers.DTOs.Products;
+using Service.Helpers.DTOs.Tags;
+using Service.Helpers.Exceptions;
 using Service.Services.Interfaces;
 
 namespace Service.Services
@@ -31,7 +32,7 @@ namespace Service.Services
         public async Task<IEnumerable<CategoryDto>> GetCategoriesAsync()
         {
             var categories = await _categoryRepo.GetAllAsync();
-            return categories.Select(ProductMapper.ToDto);
+            return categories.Select(ToDto);
         }
 
         public async Task<IEnumerable<ProductDto>> GetAllAsync()
@@ -55,16 +56,22 @@ namespace Service.Services
             return await MapProductsAsync(products.Where(m => m.CategoryId == category.Id));
         }
 
-        public async Task<ProductDto?> GetByIdAsync(int id)
+        public async Task<ProductDto> GetByIdAsync(int id)
         {
             var product = await _productRepo.GetByIdAsync(id);
             if (product is null)
             {
-                return null;
+                throw new NotFoundException();
             }
 
             var result = await MapProductsAsync(new List<Product> { product });
-            return result.FirstOrDefault();
+            var dto = result.FirstOrDefault();
+            if (dto is null)
+            {
+                throw new NotFoundException();
+            }
+
+            return dto;
         }
 
         private async Task<List<ProductDto>> MapProductsAsync(IEnumerable<Product> products)
@@ -86,10 +93,52 @@ namespace Service.Services
                     .Where(m => tags.ContainsKey(m.TagId))
                     .Select(m => tags[m.TagId]);
 
-                result.Add(ProductMapper.ToDto(product, category, productTagList, images[product.Id]));
+                result.Add(ToDto(product, category, productTagList, images[product.Id]));
             }
 
             return result;
+        }
+
+        private static CategoryDto ToDto(Category category)
+        {
+            return new CategoryDto
+            {
+                Id = category.Id,
+                Name = category.Name,
+                Slug = category.Slug
+            };
+        }
+
+        private static TagDto ToDto(Tag tag)
+        {
+            return new TagDto
+            {
+                Id = tag.Id,
+                Name = tag.Name,
+                Slug = tag.Slug
+            };
+        }
+
+        private static ProductDto ToDto(Product product, Category category, IEnumerable<Tag> tags, IEnumerable<ProductImage> images)
+        {
+            var dto = new ProductDto();
+            Fill(dto, product, category, tags, images);
+            return dto;
+        }
+
+        private static void Fill(ProductDto dto, Product product, Category category, IEnumerable<Tag> tags, IEnumerable<ProductImage> images)
+        {
+            dto.Id = product.Id;
+            dto.Name = product.Name;
+            dto.Description = product.Description;
+            dto.Price = product.Price;
+            dto.Stock = product.Stock;
+            dto.ImagePath = product.ImagePath;
+            dto.CategoryId = category.Id;
+            dto.CategoryName = category.Name;
+            dto.CategorySlug = category.Slug;
+            dto.Images = images.OrderBy(m => m.Order).Select(m => m.ImagePath).ToList();
+            dto.Tags = tags.Select(ToDto).ToList();
         }
     }
 }

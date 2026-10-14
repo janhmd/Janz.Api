@@ -1,5 +1,5 @@
-using Service.DTOs.Categories;
-using Service.DTOs.Products;
+using Service.Helpers.DTOs.Categories;
+using Service.Helpers.DTOs.Products;
 
 namespace Service.Services.Interfaces
 {
@@ -8,6 +8,6 @@ namespace Service.Services.Interfaces
         Task<IEnumerable<CategoryDto>> GetCategoriesAsync();
         Task<IEnumerable<ProductDto>> GetAllAsync();
         Task<IEnumerable<ProductDto>> GetByCategorySlugAsync(string slug);
-        Task<ProductDto?> GetByIdAsync(int id);
+        Task<ProductDto> GetByIdAsync(int id);
     }
 }

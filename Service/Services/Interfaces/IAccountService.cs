@@ -1,10 +1,11 @@
-using Service.DTOs.Account;
-using Service.DTOs.Common;
+using Service.Helpers.DTOs.Accounts;
+using Service.Helpers.Responses;
 
-namespace Service.Services.Interfaces;
-
-public interface IAccountService
+namespace Service.Services.Interfaces
 {
-    Task<ServiceResult<AuthResponseDto>> RegisterAsync(RegisterDto dto);
-    Task<ServiceResult<AuthResponseDto>> LoginAsync(LoginDto dto);
+    public interface IAccountService
+    {
+        Task<ServiceResult<AuthResponseDto>> RegisterAsync(RegisterDto model);
+        Task<ServiceResult<AuthResponseDto>> LoginAsync(LoginDto model);
+    }
 }

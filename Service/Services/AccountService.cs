@@ -2,79 +2,114 @@ using Domain.Constants;
 using Domain.Entities;
 using FluentValidation;
 using Microsoft.AspNetCore.Identity;
-using Service.DTOs.Account;
-using Service.DTOs.Common;
 using Service.Helpers;
-using Service.Mappings;
+using Service.Helpers.DTOs.Accounts;
+using Service.Helpers.Responses;
 using Service.Services.Interfaces;
 
-namespace Service.Services;
-
-public class AccountService : IAccountService
+namespace Service.Services
 {
-    private readonly UserManager<AppUser> _userManager;
-    private readonly IValidator<RegisterDto> _registerValidator;
-    private readonly IValidator<LoginDto> _loginValidator;
-    private readonly JwtTokenGenerator _jwtTokenGenerator;
-
-    public AccountService(
-        UserManager<AppUser> userManager,
-        IValidator<RegisterDto> registerValidator,
-        IValidator<LoginDto> loginValidator,
-        JwtTokenGenerator jwtTokenGenerator)
+    public class AccountService : IAccountService
     {
-        _userManager = userManager;
-        _registerValidator = registerValidator;
-        _loginValidator = loginValidator;
-        _jwtTokenGenerator = jwtTokenGenerator;
-    }
+        private readonly UserManager<AppUser> _userManager;
+        private readonly IValidator<RegisterDto> _registerValidator;
+        private readonly IValidator<LoginDto> _loginValidator;
+        private readonly JwtTokenGenerator _jwtTokenGenerator;
 
-    public async Task<ServiceResult<AuthResponseDto>> RegisterAsync(RegisterDto dto)
-    {
-        var validation = await _registerValidator.ValidateAsync(dto);
-        if (!validation.IsValid)
+        public AccountService(UserManager<AppUser> userManager,
+                              IValidator<RegisterDto> registerValidator,
+                              IValidator<LoginDto> loginValidator,
+                              JwtTokenGenerator jwtTokenGenerator)
         {
-            return ServiceResult<AuthResponseDto>.Fail(validation.Errors.Select(error => error.ErrorMessage));
+            _userManager = userManager;
+            _registerValidator = registerValidator;
+            _loginValidator = loginValidator;
+            _jwtTokenGenerator = jwtTokenGenerator;
         }
 
-        if (await _userManager.FindByEmailAsync(dto.Email.Trim()) is not null)
+        public async Task<ServiceResult<AuthResponseDto>> RegisterAsync(RegisterDto model)
         {
-            return ServiceResult<AuthResponseDto>.Fail("This email is already registered.");
+            var validation = await _registerValidator.ValidateAsync(model);
+            if (!validation.IsValid)
+            {
+                return ServiceResult<AuthResponseDto>.Fail(validation.Errors.Select(e => e.ErrorMessage).ToArray());
+            }
+
+            if (await _userManager.FindByEmailAsync(model.Email.Trim()) is not null)
+            {
+                return ServiceResult<AuthResponseDto>.Fail("This email is already registered.");
+            }
+
+            var user = ToEntity(model);
+            var created = await _userManager.CreateAsync(user, model.Password);
+            if (!created.Succeeded)
+            {
+                return ServiceResult<AuthResponseDto>.Fail(created.Errors.Select(e => e.Description).ToArray());
+            }
+
+            await _userManager.AddToRoleAsync(user, Roles.User);
+            return ServiceResult<AuthResponseDto>.Ok(await BuildResponseAsync(user));
         }
 
-        var user = AccountMapper.ToEntity(dto);
-        var created = await _userManager.CreateAsync(user, dto.Password);
-        if (!created.Succeeded)
+        public async Task<ServiceResult<AuthResponseDto>> LoginAsync(LoginDto model)
         {
-            return ServiceResult<AuthResponseDto>.Fail(created.Errors.Select(error => error.Description));
+            var validation = await _loginValidator.ValidateAsync(model);
+            if (!validation.IsValid)
+            {
+                return ServiceResult<AuthResponseDto>.Fail(validation.Errors.Select(e => e.ErrorMessage).ToArray());
+            }
+
+            var user = await _userManager.FindByEmailAsync(model.Email.Trim());
+            if (user is null || !await _userManager.CheckPasswordAsync(user, model.Password))
+            {
+                return ServiceResult<AuthResponseDto>.Fail("Email or password is wrong.");
+            }
+
+            return ServiceResult<AuthResponseDto>.Ok(await BuildResponseAsync(user));
         }
 
-        await _userManager.AddToRoleAsync(user, Roles.User);
-        return ServiceResult<AuthResponseDto>.Ok(await BuildResponseAsync(user));
-    }
-
-    public async Task<ServiceResult<AuthResponseDto>> LoginAsync(LoginDto dto)
-    {
-        var validation = await _loginValidator.ValidateAsync(dto);
-        if (!validation.IsValid)
+        private async Task<AuthResponseDto> BuildResponseAsync(AppUser user)
         {
-            return ServiceResult<AuthResponseDto>.Fail(validation.Errors.Select(error => error.ErrorMessage));
+            var roles = await _userManager.GetRolesAsync(user);
+            var role = roles.FirstOrDefault() ?? Roles.User;
+            var token = _jwtTokenGenerator.CreateToken(user, roles);
+            return ToDto(user, token, role);
         }
 
-        var user = await _userManager.FindByEmailAsync(dto.Email.Trim());
-        if (user is null || !await _userManager.CheckPasswordAsync(user, dto.Password))
+        private static AppUser ToEntity(RegisterDto model)
         {
-            return ServiceResult<AuthResponseDto>.Fail("Email or password is wrong.");
+            SplitName(model.FullName, out var name, out var surname);
+
+            return new AppUser
+            {
+                UserName = model.Email.Trim(),
+                Email = model.Email.Trim(),
+                Name = name,
+                Surname = surname
+            };
         }
 
-        return ServiceResult<AuthResponseDto>.Ok(await BuildResponseAsync(user));
-    }
+        private static AuthResponseDto ToDto(AppUser user, string token, string role)
+        {
+            var dto = new AuthResponseDto();
+            Fill(dto, user, token, role);
+            return dto;
+        }
 
-    private async Task<AuthResponseDto> BuildResponseAsync(AppUser user)
-    {
-        var roles = await _userManager.GetRolesAsync(user);
-        var role = roles.FirstOrDefault() ?? Roles.User;
-        var token = _jwtTokenGenerator.CreateToken(user, roles);
-        return AccountMapper.ToResponse(user, token, role);
+        private static void Fill(AuthResponseDto dto, AppUser user, string token, string role)
+        {
+            var fullName = string.Join(" ", new[] { user.Name, user.Surname }.Where(part => !string.IsNullOrWhiteSpace(part)));
+            dto.Token = token;
+            dto.Email = user.Email ?? string.Empty;
+            dto.FullName = fullName;
+            dto.Role = role;
+        }
+
+        private static void SplitName(string fullName, out string name, out string surname)
+        {
+            var parts = fullName.Trim().Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
+            name = parts.Length > 0 ? parts[0] : string.Empty;
+            surname = parts.Length > 1 ? parts[1] : string.Empty;
+        }
     }
 }

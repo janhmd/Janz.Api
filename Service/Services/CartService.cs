@@ -1,9 +1,8 @@
 using Domain.Entities;
 using FluentValidation;
 using Repository.Repositories.Interfaces;
-using Service.DTOs.Cart;
-using Service.DTOs.Common;
-using Service.Mappings;
+using Service.Helpers.DTOs.Cart;
+using Service.Helpers.Responses;
 using Service.Services.Interfaces;
 
 namespace Service.Services
@@ -36,33 +35,33 @@ namespace Service.Services
             {
                 if (products.TryGetValue(item.ProductId, out var product))
                 {
-                    result.Add(CartMapper.ToDto(item, product));
+                    result.Add(ToDto(item, product));
                 }
             }
 
-            return CartMapper.ToDto(result);
+            return ToDto(result);
         }
 
-        public async Task<ServiceResult<CartDto>> AddAsync(string userId, AddCartItemDto dto)
+        public async Task<ServiceResult<CartDto>> AddAsync(string userId, AddCartItemDto model)
         {
-            var validation = await _addValidator.ValidateAsync(dto);
+            var validation = await _addValidator.ValidateAsync(model);
             if (!validation.IsValid)
             {
-                return ServiceResult<CartDto>.Fail(validation.Errors.Select(error => error.ErrorMessage));
+                return ServiceResult<CartDto>.Fail(validation.Errors.Select(e => e.ErrorMessage).ToArray());
             }
 
-            var product = await _productRepo.GetByIdAsync(dto.ProductId);
+            var product = await _productRepo.GetByIdAsync(model.ProductId);
             if (product is null)
             {
                 return ServiceResult<CartDto>.Fail("Product not found.");
             }
 
             var existing = (await _cartItemRepo.GetAllAsync())
-                .FirstOrDefault(m => m.UserId == userId && m.ProductId == dto.ProductId);
+                .FirstOrDefault(m => m.UserId == userId && m.ProductId == model.ProductId);
 
             if (existing is null)
             {
-                if (dto.Quantity > product.Stock)
+                if (model.Quantity > product.Stock)
                 {
                     return ServiceResult<CartDto>.Fail("Not enough stock.");
                 }
@@ -70,8 +69,8 @@ namespace Service.Services
                 await _cartItemRepo.AddAsync(new CartItem
                 {
                     UserId = userId,
-                    ProductId = dto.ProductId,
-                    Quantity = dto.Quantity
+                    ProductId = model.ProductId,
+                    Quantity = model.Quantity
                 });
             }
             else
@@ -82,24 +81,24 @@ namespace Service.Services
                     return ServiceResult<CartDto>.Fail("Cart item not found.");
                 }
 
-                if (item.Quantity + dto.Quantity > product.Stock)
+                if (item.Quantity + model.Quantity > product.Stock)
                 {
                     return ServiceResult<CartDto>.Fail("Not enough stock.");
                 }
 
-                item.Quantity += dto.Quantity;
+                item.Quantity += model.Quantity;
                 await _cartItemRepo.UpdateAsync(item);
             }
 
             return ServiceResult<CartDto>.Ok(await GetAsync(userId));
         }
 
-        public async Task<ServiceResult<CartDto>> UpdateAsync(string userId, int itemId, UpdateCartItemDto dto)
+        public async Task<ServiceResult<CartDto>> UpdateAsync(string userId, int itemId, UpdateCartItemDto model)
         {
-            var validation = await _updateValidator.ValidateAsync(dto);
+            var validation = await _updateValidator.ValidateAsync(model);
             if (!validation.IsValid)
             {
-                return ServiceResult<CartDto>.Fail(validation.Errors.Select(error => error.ErrorMessage));
+                return ServiceResult<CartDto>.Fail(validation.Errors.Select(e => e.ErrorMessage).ToArray());
             }
 
             var item = await _cartItemRepo.GetByIdAsync(itemId);
@@ -114,12 +113,12 @@ namespace Service.Services
                 return ServiceResult<CartDto>.Fail("Product not found.");
             }
 
-            if (dto.Quantity > product.Stock)
+            if (model.Quantity > product.Stock)
             {
                 return ServiceResult<CartDto>.Fail("Not enough stock.");
             }
 
-            item.Quantity = dto.Quantity;
+            item.Quantity = model.Quantity;
             await _cartItemRepo.UpdateAsync(item);
 
             return ServiceResult<CartDto>.Ok(await GetAsync(userId));
@@ -136,6 +135,35 @@ namespace Service.Services
             await _cartItemRepo.DeleteAsync(item);
 
             return ServiceResult<CartDto>.Ok(await GetAsync(userId));
+        }
+
+        private static CartItemDto ToDto(CartItem item, Product product)
+        {
+            var dto = new CartItemDto();
+            Fill(dto, item, product);
+            return dto;
+        }
+
+        private static void Fill(CartItemDto dto, CartItem item, Product product)
+        {
+            dto.Id = item.Id;
+            dto.ProductId = product.Id;
+            dto.ProductName = product.Name;
+            dto.ImagePath = product.ImagePath;
+            dto.Price = product.Price;
+            dto.Stock = product.Stock;
+            dto.Quantity = item.Quantity;
+            dto.Total = product.Price * item.Quantity;
+        }
+
+        private static CartDto ToDto(List<CartItemDto> items)
+        {
+            return new CartDto
+            {
+                Items = items,
+                Count = items.Sum(m => m.Quantity),
+                Total = items.Sum(m => m.Total)
+            };
         }
     }
 }

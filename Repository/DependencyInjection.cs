@@ -8,6 +8,7 @@ namespace Repository
     {
         public static IServiceCollection AddRepositoryLayer(this IServiceCollection services)
         {
+            services.AddScoped<IAddressRepository, AddressRepository>();
             services.AddScoped(typeof(IBaseRepository<>), typeof(BaseRepository<>));
             return services;
         }

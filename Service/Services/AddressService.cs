@@ -9,11 +9,11 @@ namespace Service.Services
 {
     public class AddressService : IAddressService
     {
-        private readonly IBaseRepository<Address> _addressRepo;
+        private readonly IAddressRepository _addressRepo;
         private readonly IValidator<CreateAddressDto> _createValidator;
         private readonly IValidator<UpdateAddressDto> _updateValidator;
 
-        public AddressService(IBaseRepository<Address> addressRepo,
+        public AddressService(IAddressRepository addressRepo,
                               IValidator<CreateAddressDto> createValidator,
                               IValidator<UpdateAddressDto> updateValidator)
         {
@@ -24,14 +24,14 @@ namespace Service.Services
 
         public async Task<IEnumerable<AddressDto>> GetAllAsync(string userId)
         {
-            var addresses = (await _addressRepo.GetAllAsync()).Where(m => m.UserId == userId);
+            var addresses = await _addressRepo.GetByUserAsync(userId);
             return addresses.Select(ToDto);
         }
 
         public async Task<ServiceResult<AddressDto>> GetByIdAsync(string userId, int id)
         {
-            var address = await _addressRepo.GetByIdAsync(id);
-            if (address is null || address.UserId != userId)
+            var address = await _addressRepo.GetByIdForUserAsync(id, userId);
+            if (address is null)
             {
                 return ServiceResult<AddressDto>.NotFound();
             }
@@ -62,8 +62,8 @@ namespace Service.Services
                 return ServiceResult<AddressDto>.Fail(validation.Errors.Select(e => e.ErrorMessage).ToArray());
             }
 
-            var address = await _addressRepo.GetByIdAsync(id);
-            if (address is null || address.UserId != userId)
+            var address = await _addressRepo.GetByIdForUserAsync(id, userId);
+            if (address is null)
             {
                 return ServiceResult<AddressDto>.NotFound();
             }
@@ -76,8 +76,8 @@ namespace Service.Services
 
         public async Task<ServiceResult<bool>> DeleteAsync(string userId, int id)
         {
-            var address = await _addressRepo.GetByIdAsync(id);
-            if (address is null || address.UserId != userId)
+            var address = await _addressRepo.GetByIdForUserAsync(id, userId);
+            if (address is null)
             {
                 return ServiceResult<bool>.NotFound();
             }

@@ -9,40 +9,35 @@ namespace Service.Services
 {
     public class OrderService : IOrderService
     {
-        private readonly IBaseRepository<Order> _orderRepo;
-        private readonly IBaseRepository<OrderItem> _orderItemRepo;
+        private readonly IOrderRepository _orderRepo;
         private readonly IBaseRepository<CartItem> _cartItemRepo;
         private readonly IBaseRepository<Product> _productRepo;
 
-        public OrderService(IBaseRepository<Order> orderRepo,
-                            IBaseRepository<OrderItem> orderItemRepo,
+        public OrderService(IOrderRepository orderRepo,
                             IBaseRepository<CartItem> cartItemRepo,
                             IBaseRepository<Product> productRepo)
         {
             _orderRepo = orderRepo;
-            _orderItemRepo = orderItemRepo;
             _cartItemRepo = cartItemRepo;
             _productRepo = productRepo;
         }
 
         public async Task<IEnumerable<OrderDto>> GetAllAsync(string userId)
         {
-            var orders = (await _orderRepo.GetAllAsync()).Where(m => m.UserId == userId);
-            var items = (await _orderItemRepo.GetAllAsync()).ToLookup(m => m.OrderId);
-
-            return orders.Select(m => ToDto(m, items[m.Id]));
+            // Sətirlər Include ilə birlikdə gəlir: bütün OrderItems cədvəlini yükləməyə ehtiyac yoxdur
+            var orders = await _orderRepo.GetByUserAsync(userId);
+            return orders.Select(m => ToDto(m, m.Items));
         }
 
         public async Task<ServiceResult<OrderDto>> GetByIdAsync(string userId, int id)
         {
-            var order = await _orderRepo.GetByIdAsync(id);
-            if (order is null || order.UserId != userId)
+            var order = await _orderRepo.GetByIdForUserAsync(id, userId);
+            if (order is null)
             {
                 return ServiceResult<OrderDto>.NotFound();
             }
 
-            var items = (await _orderItemRepo.GetAllAsync()).Where(m => m.OrderId == order.Id);
-            return ServiceResult<OrderDto>.Ok(ToDto(order, items));
+            return ServiceResult<OrderDto>.Ok(ToDto(order, order.Items));
         }
 
         public async Task<ServiceResult<OrderDto>> CreateFromCartAsync(string userId)

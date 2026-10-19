@@ -10,6 +10,7 @@ namespace Repository
         {
             services.AddScoped<IAddressRepository, AddressRepository>();
             services.AddScoped<ICartItemRepository, CartItemRepository>();
+            services.AddScoped<IOrderRepository, OrderRepository>();
             services.AddScoped(typeof(IBaseRepository<>), typeof(BaseRepository<>));
             return services;
         }

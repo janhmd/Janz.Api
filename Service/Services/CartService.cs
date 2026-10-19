@@ -9,12 +9,12 @@ namespace Service.Services
 {
     public class CartService : ICartService
     {
-        private readonly IBaseRepository<CartItem> _cartItemRepo;
+        private readonly ICartItemRepository _cartItemRepo;
         private readonly IBaseRepository<Product> _productRepo;
         private readonly IValidator<AddCartItemDto> _addValidator;
         private readonly IValidator<UpdateCartItemDto> _updateValidator;
 
-        public CartService(IBaseRepository<CartItem> cartItemRepo,
+        public CartService(ICartItemRepository cartItemRepo,
                            IBaseRepository<Product> productRepo,
                            IValidator<AddCartItemDto> addValidator,
                            IValidator<UpdateCartItemDto> updateValidator)
@@ -27,17 +27,9 @@ namespace Service.Services
 
         public async Task<CartDto> GetAsync(string userId)
         {
-            var items = (await _cartItemRepo.GetAllAsync()).Where(m => m.UserId == userId);
-            var products = (await _productRepo.GetAllAsync()).ToDictionary(m => m.Id);
-
-            var result = new List<CartItemDto>();
-            foreach (var item in items)
-            {
-                if (products.TryGetValue(item.ProductId, out var product))
-                {
-                    result.Add(ToDto(item, product));
-                }
-            }
+            // Məhsul Include ilə birlikdə gəlir: bütün məhsul cədvəlini yükləməyə ehtiyac yoxdur
+            var items = await _cartItemRepo.GetByUserAsync(userId);
+            var result = items.Select(m => ToDto(m, m.Product)).ToList();
 
             return ToDto(result);
         }
@@ -56,10 +48,9 @@ namespace Service.Services
                 return ServiceResult<CartDto>.Fail("Product not found.");
             }
 
-            var existing = (await _cartItemRepo.GetAllAsync())
-                .FirstOrDefault(m => m.UserId == userId && m.ProductId == model.ProductId);
+            var item = await _cartItemRepo.GetByProductForUserAsync(model.ProductId, userId);
 
-            if (existing is null)
+            if (item is null)
             {
                 if (model.Quantity > product.Stock)
                 {
@@ -75,12 +66,7 @@ namespace Service.Services
             }
             else
             {
-                var item = await _cartItemRepo.GetByIdAsync(existing.Id);
-                if (item is null)
-                {
-                    return ServiceResult<CartDto>.Fail("Cart item not found.");
-                }
-
+                // Eyni məhsul artıq səbətdədir: yeni sətir yox, say artırılır (UserId + ProductId unikal indeksdir)
                 if (item.Quantity + model.Quantity > product.Stock)
                 {
                     return ServiceResult<CartDto>.Fail("Not enough stock.");
@@ -101,8 +87,8 @@ namespace Service.Services
                 return ServiceResult<CartDto>.Fail(validation.Errors.Select(e => e.ErrorMessage).ToArray());
             }
 
-            var item = await _cartItemRepo.GetByIdAsync(itemId);
-            if (item is null || item.UserId != userId)
+            var item = await _cartItemRepo.GetByIdForUserAsync(itemId, userId);
+            if (item is null)
             {
                 return ServiceResult<CartDto>.Fail("Cart item not found.");
             }
@@ -126,8 +112,8 @@ namespace Service.Services
 
         public async Task<ServiceResult<CartDto>> RemoveAsync(string userId, int itemId)
         {
-            var item = await _cartItemRepo.GetByIdAsync(itemId);
-            if (item is null || item.UserId != userId)
+            var item = await _cartItemRepo.GetByIdForUserAsync(itemId, userId);
+            if (item is null)
             {
                 return ServiceResult<CartDto>.Fail("Cart item not found.");
             }

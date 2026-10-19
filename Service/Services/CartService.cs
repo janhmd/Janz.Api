@@ -90,7 +90,7 @@ namespace Service.Services
             var item = await _cartItemRepo.GetByIdForUserAsync(itemId, userId);
             if (item is null)
             {
-                return ServiceResult<CartDto>.Fail("Cart item not found.");
+                return ServiceResult<CartDto>.NotFound();
             }
 
             var product = await _productRepo.GetByIdAsync(item.ProductId);
@@ -115,7 +115,7 @@ namespace Service.Services
             var item = await _cartItemRepo.GetByIdForUserAsync(itemId, userId);
             if (item is null)
             {
-                return ServiceResult<CartDto>.Fail("Cart item not found.");
+                return ServiceResult<CartDto>.NotFound();
             }
 
             await _cartItemRepo.DeleteAsync(item);

@@ -1,4 +1,5 @@
 using Domain.Entities;
+using Repository.Results;
 
 namespace Repository.Repositories.Interfaces
 {
@@ -9,5 +10,8 @@ namespace Repository.Repositories.Interfaces
 
         // Sifariş yalnız sahibinə aiddirsə tapılır (başqasının sifarişinə baxmağın qarşısını alır)
         Task<Order?> GetByIdForUserAsync(int id, string userId);
+
+        // Bir tranzaksiyada: stok azalır, sifariş və sətirləri yazılır, səbət boşalır. Ya hamısı olur, ya heç biri.
+        Task<OrderPlaceResult> PlaceAsync(OrderPlan plan);
     }
 }

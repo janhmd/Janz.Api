@@ -1,6 +1,6 @@
 using Domain.Entities;
-using Domain.Enums;
 using Repository.Repositories.Interfaces;
+using Repository.Results;
 using Service.Helpers.DTOs.Orders;
 using Service.Helpers.Responses;
 using Service.Services.Interfaces;
@@ -10,16 +10,10 @@ namespace Service.Services
     public class OrderService : IOrderService
     {
         private readonly IOrderRepository _orderRepo;
-        private readonly IBaseRepository<CartItem> _cartItemRepo;
-        private readonly IBaseRepository<Product> _productRepo;
 
-        public OrderService(IOrderRepository orderRepo,
-                            IBaseRepository<CartItem> cartItemRepo,
-                            IBaseRepository<Product> productRepo)
+        public OrderService(IOrderRepository orderRepo)
         {
             _orderRepo = orderRepo;
-            _cartItemRepo = cartItemRepo;
-            _productRepo = productRepo;
         }
 
         public async Task<IEnumerable<OrderDto>> GetAllAsync(string userId)
@@ -42,69 +36,16 @@ namespace Service.Services
 
         public async Task<ServiceResult<OrderDto>> CreateFromCartAsync(string userId)
         {
-            var cartItems = (await _cartItemRepo.GetAllAsync()).Where(m => m.UserId == userId).ToList();
-            if (cartItems.Count == 0)
-            {
-                return ServiceResult<OrderDto>.Fail("Cart is empty.");
-            }
+            // Stok, sifariş və səbət bir tranzaksiyada dəyişir (OrderRepository.PlaceAsync)
+            var result = await _orderRepo.PlaceAsync(new OrderPlan(userId));
 
-            var products = (await _productRepo.GetAllAsync()).ToDictionary(m => m.Id);
-            foreach (var cartItem in cartItems)
+            return result.Outcome switch
             {
-                if (!products.TryGetValue(cartItem.ProductId, out var product))
-                {
-                    return ServiceResult<OrderDto>.Fail("Product not found.");
-                }
-
-                if (cartItem.Quantity > product.Stock)
-                {
-                    return ServiceResult<OrderDto>.Fail("Not enough stock.");
-                }
-            }
-
-            var orderItems = new List<OrderItem>();
-            decimal total = 0;
-            foreach (var cartItem in cartItems)
-            {
-                var product = products[cartItem.ProductId];
-                orderItems.Add(new OrderItem
-                {
-                    ProductId = product.Id,
-                    ProductName = product.Name,
-                    ImagePath = product.ImagePath,
-                    Price = product.Price,
-                    Quantity = cartItem.Quantity
-                });
-                total += product.Price * cartItem.Quantity;
-            }
-
-            var order = new Order
-            {
-                UserId = userId,
-                Status = OrderStatus.Pending,
-                Total = total,
-                Items = orderItems
+                OrderOutcome.Success => ServiceResult<OrderDto>.Ok(ToDto(result.Order!, result.Order!.Items)),
+                OrderOutcome.CartEmpty => ServiceResult<OrderDto>.Fail("Cart is empty."),
+                OrderOutcome.InsufficientStock => ServiceResult<OrderDto>.Fail($"Not enough stock for {result.Message}."),
+                _ => ServiceResult<OrderDto>.Fail("The order could not be placed.")
             };
-
-            await _orderRepo.AddAsync(order);
-
-            foreach (var cartItem in cartItems)
-            {
-                var product = await _productRepo.GetByIdAsync(cartItem.ProductId);
-                if (product is not null)
-                {
-                    product.Stock -= cartItem.Quantity;
-                    await _productRepo.UpdateAsync(product);
-                }
-
-                var tracked = await _cartItemRepo.GetByIdAsync(cartItem.Id);
-                if (tracked is not null)
-                {
-                    await _cartItemRepo.DeleteAsync(tracked);
-                }
-            }
-
-            return ServiceResult<OrderDto>.Ok(ToDto(order, order.Items));
         }
 
         private static OrderDto ToDto(Order order, IEnumerable<OrderItem> items)

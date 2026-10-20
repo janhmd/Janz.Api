@@ -51,7 +51,12 @@ namespace Repository.Repositories
             var order = new Order
             {
                 UserId = plan.UserId,
-                Status = OrderStatus.Pending
+                Status = OrderStatus.Pending,
+                DeliveryFullName = plan.DeliveryFullName,
+                DeliveryPhone = plan.DeliveryPhone,
+                DeliveryLine = plan.DeliveryLine,
+                DeliveryCity = plan.DeliveryCity,
+                DeliveryPostalCode = plan.DeliveryPostalCode
             };
 
             foreach (var item in cartItems)

@@ -7,6 +7,6 @@ namespace Service.Services.Interfaces
     {
         Task<IEnumerable<OrderDto>> GetAllAsync(string userId);
         Task<ServiceResult<OrderDto>> GetByIdAsync(string userId, int id);
-        Task<ServiceResult<OrderDto>> CreateFromCartAsync(string userId);
+        Task<ServiceResult<OrderDto>> CreateFromCartAsync(string userId, CreateOrderDto model);
     }
 }

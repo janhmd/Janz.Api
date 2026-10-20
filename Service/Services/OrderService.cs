@@ -1,4 +1,5 @@
 using Domain.Entities;
+using FluentValidation;
 using Repository.Repositories.Interfaces;
 using Repository.Results;
 using Service.Helpers.DTOs.Orders;
@@ -10,10 +11,16 @@ namespace Service.Services
     public class OrderService : IOrderService
     {
         private readonly IOrderRepository _orderRepo;
+        private readonly IAddressRepository _addressRepo;
+        private readonly IValidator<CreateOrderDto> _createValidator;
 
-        public OrderService(IOrderRepository orderRepo)
+        public OrderService(IOrderRepository orderRepo,
+                            IAddressRepository addressRepo,
+                            IValidator<CreateOrderDto> createValidator)
         {
             _orderRepo = orderRepo;
+            _addressRepo = addressRepo;
+            _createValidator = createValidator;
         }
 
         public async Task<IEnumerable<OrderDto>> GetAllAsync(string userId)
@@ -34,10 +41,25 @@ namespace Service.Services
             return ServiceResult<OrderDto>.Ok(ToDto(order, order.Items));
         }
 
-        public async Task<ServiceResult<OrderDto>> CreateFromCartAsync(string userId)
+        public async Task<ServiceResult<OrderDto>> CreateFromCartAsync(string userId, CreateOrderDto model)
         {
+            var validation = await _createValidator.ValidateAsync(model);
+            if (!validation.IsValid)
+            {
+                return ServiceResult<OrderDto>.Fail(validation.Errors.Select(e => e.ErrorMessage).ToArray());
+            }
+
+            // Ünvan yalnız bu istifadəçiyə aiddirsə qəbul olunur (başqasının ünvanına sifariş göndərilə bilməz)
+            var address = await _addressRepo.GetByIdForUserAsync(model.AddressId, userId);
+            if (address is null)
+            {
+                return ServiceResult<OrderDto>.Fail("Choose a delivery address.");
+            }
+
+            var plan = new OrderPlan(userId, address.FullName, address.Phone, address.Line, address.City, address.PostalCode);
+
             // Stok, sifariş və səbət bir tranzaksiyada dəyişir (OrderRepository.PlaceAsync)
-            var result = await _orderRepo.PlaceAsync(new OrderPlan(userId));
+            var result = await _orderRepo.PlaceAsync(plan);
 
             return result.Outcome switch
             {
@@ -61,6 +83,11 @@ namespace Service.Services
             dto.Status = order.Status.ToString();
             dto.Total = order.Total;
             dto.CreatedAt = order.CreatedAt;
+            dto.DeliveryFullName = order.DeliveryFullName;
+            dto.DeliveryPhone = order.DeliveryPhone;
+            dto.DeliveryLine = order.DeliveryLine;
+            dto.DeliveryCity = order.DeliveryCity;
+            dto.DeliveryPostalCode = order.DeliveryPostalCode;
             dto.Items = items.Select(ToDto).ToList();
         }
 

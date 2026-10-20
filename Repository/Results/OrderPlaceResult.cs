@@ -26,6 +26,12 @@ namespace Repository.Results
         }
     }
 
-    // Servisin hazırladığı sifariş sorğusu: repository onu atomik icra edir
-    public record OrderPlan(string UserId);
+    // Servisin hazırladığı sifariş sorğusu (ünvan artıq yoxlanılıb): repository onu atomik icra edir
+    public record OrderPlan(
+        string UserId,
+        string DeliveryFullName,
+        string DeliveryPhone,
+        string DeliveryLine,
+        string DeliveryCity,
+        string DeliveryPostalCode);
 }

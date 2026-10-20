@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Service.Helpers.DTOs.Orders;
 using Service.Helpers.Responses;
 using Service.Services.Interfaces;
 
@@ -38,10 +39,11 @@ namespace Janz.Api.Controllers.Client
             return ToResponse(await _orderService.GetByIdAsync(UserId, id));
         }
 
+        // Səbətdəki hər şey seçilən ünvana sifariş olunur
         [HttpPost]
-        public async Task<IActionResult> Create()
+        public async Task<IActionResult> Create([FromBody] CreateOrderDto model)
         {
-            return ToResponse(await _orderService.CreateFromCartAsync(UserId));
+            return ToResponse(await _orderService.CreateFromCartAsync(UserId, model));
         }
 
         private static IActionResult ToResponse<T>(ServiceResult<T> result)

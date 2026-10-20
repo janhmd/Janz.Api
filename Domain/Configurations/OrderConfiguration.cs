@@ -10,6 +10,13 @@ namespace Domain.Configurations
         {
             builder.Property(m => m.Status).IsRequired();
             builder.Property(m => m.Total).HasPrecision(18, 2);
+
+            // Uzunluqlar AddressConfiguration ilə eynidir (ünvan olduğu kimi köçürülür)
+            builder.Property(m => m.DeliveryFullName).IsRequired().HasMaxLength(80);
+            builder.Property(m => m.DeliveryPhone).IsRequired().HasMaxLength(30);
+            builder.Property(m => m.DeliveryLine).IsRequired().HasMaxLength(200);
+            builder.Property(m => m.DeliveryCity).IsRequired().HasMaxLength(80);
+            builder.Property(m => m.DeliveryPostalCode).IsRequired().HasMaxLength(20);
             builder.Property(m => m.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
 
             builder.HasIndex(m => m.UserId);

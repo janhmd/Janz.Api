@@ -13,5 +13,14 @@ namespace Service.Helpers.Validators
                 throw new BadRequestException(result.Errors.Select(e => e.ErrorMessage).Distinct().ToArray());
             }
         }
+
+        // Mətn boş olmamalıdır və kənar boşluqlar silindikdən sonra limiti keçməməlidir (servis də dəyəri Trim ilə yazır)
+        public static IRuleBuilderOptions<T, string?> RequiredText<T>(this IRuleBuilder<T, string?> rule, string name, int maxLength)
+        {
+            return rule
+                .Must(value => !string.IsNullOrWhiteSpace(value)).WithMessage($"Enter the {name}.")
+                .Must(value => string.IsNullOrWhiteSpace(value) || value.Trim().Length <= maxLength)
+                    .WithMessage($"The {name} can be at most {maxLength} characters.");
+        }
     }
 }

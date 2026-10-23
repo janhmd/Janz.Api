@@ -9,5 +9,10 @@ namespace Service.Services.Interfaces
         Task<IEnumerable<ProductDto>> GetAllAsync();
         Task<IEnumerable<ProductDto>> GetByCategorySlugAsync(string slug);
         Task<ProductDto> GetByIdAsync(int id);
+
+        // Admin panel
+        Task<ProductDto> CreateAsync(CreateProductDto model);
+        Task UpdateAsync(int id, UpdateProductDto model);
+        Task DeleteAsync(int id);
     }
 }

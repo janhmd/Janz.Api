@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using Domain.Entities;
 using Janz.Api.Middlewares;
@@ -11,6 +12,10 @@ using Repository.Data;
 using Service;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Formdan gələn qiymət "29.90" kimi nöqtə ilə gəlir: kompüterin dili (az-AZ, vergül) onu səhv oxumasın
+CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
+CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -115,6 +120,9 @@ if (!app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
 }
+
+// Admin paneldən yüklənən şəkillər (wwwroot/uploads/...) buradan verilir
+app.UseStaticFiles();
 
 app.UseCors();
 app.UseAuthentication();

@@ -17,6 +17,7 @@ namespace Service
             services.AddScoped<ICartService, CartService>();
             services.AddScoped<IOrderService, OrderService>();
             services.AddScoped<IAddressService, AddressService>();
+            services.AddScoped<IFileService, FileService>();
             services.AddValidatorsFromAssemblyContaining<RegisterDtoValidator>();
             return services;
         }

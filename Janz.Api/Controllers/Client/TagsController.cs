@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Service.Services.Interfaces;
 
 namespace Janz.Api.Controllers.Client
 {
@@ -6,10 +7,17 @@ namespace Janz.Api.Controllers.Client
     [ApiController]
     public class TagsController : ControllerBase
     {
-        [HttpGet]
-        public IActionResult Get()
+        private readonly ITagService _tagService;
+
+        public TagsController(ITagService tagService)
         {
-            return Ok(Array.Empty<object>());
+            _tagService = tagService;
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetAll()
+        {
+            return Ok(await _tagService.GetAllAsync());
         }
     }
 }

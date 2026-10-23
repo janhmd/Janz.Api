@@ -7,17 +7,17 @@ namespace Janz.Api.Controllers.Client
     [ApiController]
     public class CategoriesController : ControllerBase
     {
-        private readonly IProductService _productService;
+        private readonly ICategoryService _categoryService;
 
-        public CategoriesController(IProductService productService)
+        public CategoriesController(ICategoryService categoryService)
         {
-            _productService = productService;
+            _categoryService = categoryService;
         }
 
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            return Ok(await _productService.GetCategoriesAsync());
+            return Ok(await _categoryService.GetAllAsync());
         }
     }
 }

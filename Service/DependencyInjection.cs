@@ -18,6 +18,8 @@ namespace Service
             services.AddScoped<IOrderService, OrderService>();
             services.AddScoped<IAddressService, AddressService>();
             services.AddScoped<IFileService, FileService>();
+            services.AddScoped<ICategoryService, CategoryService>();
+            services.AddScoped<ITagService, TagService>();
             services.AddValidatorsFromAssemblyContaining<RegisterDtoValidator>();
             return services;
         }

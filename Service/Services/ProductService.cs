@@ -2,7 +2,6 @@ using Domain.Entities;
 using FluentValidation;
 using Repository.Repositories.Interfaces;
 using Service.Helpers;
-using Service.Helpers.DTOs.Categories;
 using Service.Helpers.DTOs.Products;
 using Service.Helpers.DTOs.Tags;
 using Service.Helpers.Exceptions;
@@ -42,12 +41,6 @@ namespace Service.Services
             _fileService = fileService;
             _createValidator = createValidator;
             _updateValidator = updateValidator;
-        }
-
-        public async Task<IEnumerable<CategoryDto>> GetCategoriesAsync()
-        {
-            var categories = await _categoryRepo.GetAllAsync();
-            return categories.Select(ToDto);
         }
 
         public async Task<IEnumerable<ProductDto>> GetAllAsync()
@@ -309,16 +302,6 @@ namespace Service.Services
             }
 
             return result;
-        }
-
-        private static CategoryDto ToDto(Category category)
-        {
-            return new CategoryDto
-            {
-                Id = category.Id,
-                Name = category.Name,
-                Slug = category.Slug
-            };
         }
 
         private static TagDto ToDto(Tag tag)

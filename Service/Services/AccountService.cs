@@ -71,7 +71,7 @@ namespace Service.Services
         private async Task<AuthResponseDto> BuildResponseAsync(AppUser user)
         {
             var roles = await _userManager.GetRolesAsync(user);
-            var role = roles.FirstOrDefault() ?? Roles.User;
+            var role = Roles.Highest(roles);
             var token = _jwtTokenGenerator.CreateToken(user, roles);
             return ToDto(user, token, role);
         }

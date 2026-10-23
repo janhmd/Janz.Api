@@ -95,6 +95,12 @@ using (var scope = app.Services.CreateScope())
 
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
     await RoleSeeder.SeedAsync(roleManager);
+
+    // İşçi hesabları (appsettings -> SeedAdmins): ilk SuperAdmin buradan yaranır
+    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
+    var seedAdmins = app.Configuration.GetSection("SeedAdmins").Get<List<SeedAdminSettings>>() ?? new List<SeedAdminSettings>();
+    var seedLogger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("AdminSeeder");
+    await AdminSeeder.SeedAsync(userManager, seedAdmins, seedLogger);
 }
 
 if (app.Environment.IsDevelopment())

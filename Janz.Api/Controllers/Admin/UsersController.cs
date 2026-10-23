@@ -2,11 +2,12 @@ using System.Security.Claims;
 using Domain.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Service.Helpers.DTOs.Users;
 using Service.Services.Interfaces;
 
 namespace Janz.Api.Controllers.Admin
 {
-    // İstifadəçilər: siyahı və profil — Support da görür. Bloklamaq yalnız Admin və SuperAdmin-dir
+    // İstifadəçilər: siyahı və profil — Support da görür. Bloklamaq Admin və SuperAdmin-dir, rol vermək yalnız SuperAdmin
     [Route("api/admin/users")]
     [ApiController]
     [Authorize(Roles = Roles.SuperAdmin + "," + Roles.Admin + "," + Roles.Support)]
@@ -55,6 +56,14 @@ namespace Janz.Api.Controllers.Admin
         public async Task<IActionResult> Unblock([FromRoute] string id)
         {
             await _userAdminService.UnblockAsync(id, User.IsInRole(Roles.SuperAdmin));
+            return NoContent();
+        }
+
+        [HttpPut("{id}/role")]
+        [Authorize(Roles = Roles.SuperAdmin)]
+        public async Task<IActionResult> ChangeRole([FromRoute] string id, [FromBody] UpdateUserRoleDto request)
+        {
+            await _userAdminService.ChangeRoleAsync(id, request, StaffUserId);
             return NoContent();
         }
     }

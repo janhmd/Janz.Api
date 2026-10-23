@@ -1,12 +1,14 @@
 using Domain.Constants;
 using Domain.Entities;
 using Domain.Enums;
+using FluentValidation;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Repository.Repositories.Interfaces;
 using Service.Helpers.DTOs.Orders;
 using Service.Helpers.DTOs.Users;
 using Service.Helpers.Exceptions;
+using Service.Helpers.Validators;
 using Service.Services.Interfaces;
 
 namespace Service.Services
@@ -17,11 +19,15 @@ namespace Service.Services
     {
         private readonly UserManager<AppUser> _userManager;
         private readonly IOrderRepository _orderRepo;
+        private readonly IValidator<UpdateUserRoleDto> _roleValidator;
 
-        public UserAdminService(UserManager<AppUser> userManager, IOrderRepository orderRepo)
+        public UserAdminService(UserManager<AppUser> userManager,
+                                IOrderRepository orderRepo,
+                                IValidator<UpdateUserRoleDto> roleValidator)
         {
             _userManager = userManager;
             _orderRepo = orderRepo;
+            _roleValidator = roleValidator;
         }
 
         public async Task<IEnumerable<UserAdminDto>> GetAllAsync(string? role, bool? blocked, string? search)
@@ -133,6 +139,74 @@ namespace Service.Services
 
             await _userManager.SetLockoutEndDateAsync(user, null);
             await _userManager.ResetAccessFailedCountAsync(user);
+        }
+
+        public async Task<IEnumerable<RoleDto>> GetRolesAsync()
+        {
+            var users = await _userManager.Users.AsNoTracking().Select(m => m.Id).ToListAsync();
+            var roles = await GetRoleMapAsync();
+
+            // Rolu olmayan köhnə hesablar da "User" sayılır
+            var counts = users
+                .GroupBy(id => roles.GetValueOrDefault(id, Roles.User))
+                .ToDictionary(m => m.Key, m => m.Count());
+
+            return Roles.All.AsEnumerable().Reverse().Select(m => new RoleDto
+            {
+                Name = m,
+                Description = Roles.Descriptions[m],
+                UserCount = counts.GetValueOrDefault(m)
+            }).ToList();
+        }
+
+        public async Task ChangeRoleAsync(string id, UpdateUserRoleDto model, string staffId)
+        {
+            await _roleValidator.EnsureValidAsync(model);
+            var role = model.Role!;
+
+            var user = await _userManager.FindByIdAsync(id);
+            if (user is null)
+            {
+                throw new NotFoundException();
+            }
+
+            // SuperAdmin öz rolunu dəyişə bilməz: təsadüfən panelə girişi itirməsin
+            if (user.Id == staffId)
+            {
+                throw new BadRequestException("You can't change your own role.");
+            }
+
+            var current = await _userManager.GetRolesAsync(user);
+            if (current.Count == 1 && current[0] == role)
+            {
+                return;
+            }
+
+            // Son SuperAdmin rolunu itirə bilməz: sistemdə rol verə bilən heç kim qalmazdı
+            if (current.Contains(Roles.SuperAdmin) && role != Roles.SuperAdmin)
+            {
+                var superAdmins = await _userManager.GetUsersInRoleAsync(Roles.SuperAdmin);
+                if (superAdmins.Count <= 1)
+                {
+                    throw new BadRequestException("This is the last SuperAdmin, so the role can't be taken away.");
+                }
+            }
+
+            // Hər istifadəçinin bir rolu olur: köhnələr silinir, yenisi verilir
+            if (current.Count > 0)
+            {
+                var removed = await _userManager.RemoveFromRolesAsync(user, current);
+                if (!removed.Succeeded)
+                {
+                    throw new BadRequestException(removed.Errors.Select(e => e.Description).ToArray());
+                }
+            }
+
+            var added = await _userManager.AddToRoleAsync(user, role);
+            if (!added.Succeeded)
+            {
+                throw new BadRequestException(added.Errors.Select(e => e.Description).ToArray());
+            }
         }
 
         // Hər istifadəçinin ən yüksək rolu: hər rol üçün bir sorğu (istifadəçi başına sorğu yox)

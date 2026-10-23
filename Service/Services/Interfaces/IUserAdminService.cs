@@ -11,5 +11,9 @@ namespace Service.Services.Interfaces
         // staffId: əməliyyatı edən işçi (özünü bloklaya bilməz), staffIsSuperAdmin: işçini yalnız SuperAdmin bloklayır
         Task BlockAsync(string id, string staffId, bool staffIsSuperAdmin);
         Task UnblockAsync(string id, bool staffIsSuperAdmin);
+
+        // Yalnız SuperAdmin: rollar və onlarda neçə istifadəçi olduğu, istifadəçiyə rol vermək
+        Task<IEnumerable<RoleDto>> GetRolesAsync();
+        Task ChangeRoleAsync(string id, UpdateUserRoleDto model, string staffId);
     }
 }

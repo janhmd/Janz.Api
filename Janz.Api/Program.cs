@@ -90,6 +90,21 @@ builder.Services.AddAuthentication(options =>
                 if (user is null || await userManager.IsLockedOutAsync(user))
                 {
                     context.Fail("The account is blocked or was removed.");
+                    return;
+                }
+
+                // Rollar bazadan təzədən götürülür: SuperAdmin rolu dəyişəndə yenidən daxil olmadan qüvvəyə minir
+                if (context.Principal?.Identity is ClaimsIdentity identity)
+                {
+                    foreach (var claim in identity.FindAll(ClaimTypes.Role).ToList())
+                    {
+                        identity.RemoveClaim(claim);
+                    }
+
+                    foreach (var role in await userManager.GetRolesAsync(user))
+                    {
+                        identity.AddClaim(new Claim(ClaimTypes.Role, role));
+                    }
                 }
             }
         };

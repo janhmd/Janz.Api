@@ -10,6 +10,16 @@ public static class Roles
 
     public static readonly string[] All = { User, Support, Editor, Admin, SuperAdmin };
 
+    // Rollar səhifəsində göstərilən izah
+    public static readonly Dictionary<string, string> Descriptions = new()
+    {
+        [User] = "Customer of the shop, no admin access",
+        [Support] = "Sees orders and users, changes order status",
+        [Editor] = "Journal articles, info pages, community and reviews",
+        [Admin] = "Runs the shop and content; cannot give roles or change settings",
+        [SuperAdmin] = "Everything, plus giving roles and changing settings"
+    };
+
     // Admin panelə girə bilən rollar
     public static readonly string[] Staff = { Support, Editor, Admin, SuperAdmin };
 

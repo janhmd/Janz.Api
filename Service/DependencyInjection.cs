@@ -21,6 +21,7 @@ namespace Service
             services.AddScoped<ICategoryService, CategoryService>();
             services.AddScoped<ITagService, TagService>();
             services.AddScoped<IUserAdminService, UserAdminService>();
+            services.AddScoped<IDashboardService, DashboardService>();
             services.AddValidatorsFromAssemblyContaining<RegisterDtoValidator>();
             return services;
         }

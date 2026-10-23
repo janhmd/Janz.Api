@@ -146,7 +146,8 @@ namespace Service.Services
             }
         }
 
-        private static AdminOrderDto ToAdminDto(Order order)
+        // Dashboard-dakı "son sifarişlər" də eyni formada göstərilir
+        public static AdminOrderDto ToAdminDto(Order order)
         {
             var dto = new AdminOrderDto();
             Fill(dto, order, order.Items);

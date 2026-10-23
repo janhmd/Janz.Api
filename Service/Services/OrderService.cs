@@ -91,10 +91,15 @@ namespace Service.Services
 
             var orders = await _orderRepo.GetAllForAdminAsync(filter);
 
-            // Axtarış: sifariş nömrəsi, müştərinin adı, emaili və ya alıcının adı/telefonu
-            if (!string.IsNullOrWhiteSpace(search))
+            // Axtarış: "#12" yalnız sifariş nömrəsinə baxır; qalan mətn müştərinin adı, emaili və ya alıcının adı/telefonu ilədir
+            if (!string.IsNullOrWhiteSpace(search) && search.Trim().StartsWith('#'))
             {
-                var text = search.Trim().TrimStart('#');
+                var number = search.Trim().TrimStart('#');
+                orders = orders.Where(m => m.Id.ToString() == number).ToList();
+            }
+            else if (!string.IsNullOrWhiteSpace(search))
+            {
+                var text = search.Trim();
                 orders = orders.Where(m =>
                         m.Id.ToString() == text ||
                         (m.User.Email ?? string.Empty).Contains(text, StringComparison.OrdinalIgnoreCase) ||

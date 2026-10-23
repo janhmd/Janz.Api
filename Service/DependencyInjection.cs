@@ -20,6 +20,7 @@ namespace Service
             services.AddScoped<IFileService, FileService>();
             services.AddScoped<ICategoryService, CategoryService>();
             services.AddScoped<ITagService, TagService>();
+            services.AddScoped<IUserAdminService, UserAdminService>();
             services.AddValidatorsFromAssemblyContaining<RegisterDtoValidator>();
             return services;
         }

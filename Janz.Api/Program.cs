@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Security.Claims;
 using System.Text;
 using Domain.Entities;
 using Janz.Api.Middlewares;
@@ -75,6 +76,22 @@ builder.Services.AddAuthentication(options =>
             ValidIssuer = builder.Configuration["Jwt:Issuer"],
             ValidAudience = builder.Configuration["Jwt:Audience"],
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
+        };
+
+        // Token hələ vaxtı bitməyibsə də, istifadəçi silinib və ya bloklanıbsa sorğu qəbul olunmur
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = async context =>
+            {
+                var userId = context.Principal?.FindFirstValue(ClaimTypes.NameIdentifier);
+                var userManager = context.HttpContext.RequestServices.GetRequiredService<UserManager<AppUser>>();
+                var user = userId is null ? null : await userManager.FindByIdAsync(userId);
+
+                if (user is null || await userManager.IsLockedOutAsync(user))
+                {
+                    context.Fail("The account is blocked or was removed.");
+                }
+            }
         };
     });
 

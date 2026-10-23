@@ -65,6 +65,12 @@ namespace Service.Services
                 return ServiceResult<AuthResponseDto>.Fail("Email or password is wrong.");
             }
 
+            // Admin paneldən bloklanmış hesab daxil ola bilmir
+            if (await _userManager.IsLockedOutAsync(user))
+            {
+                return ServiceResult<AuthResponseDto>.Fail("Your account is blocked. Please contact support.");
+            }
+
             return ServiceResult<AuthResponseDto>.Ok(await BuildResponseAsync(user));
         }
 

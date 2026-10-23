@@ -32,6 +32,68 @@ namespace Repository.Repositories
         }
     
 
+        public async Task<IReadOnlyList<Order>> GetAllForAdminAsync(OrderStatus? status)
+        {
+            var query = _dbSet
+                    .AsNoTracking()
+                    .Include(m => m.Items)
+                    .Include(m => m.User)
+                    .AsQueryable();
+
+            if (status is not null)
+            {
+                query = query.Where(m => m.Status == status);
+            }
+
+            return await query
+                    .OrderByDescending(m => m.CreatedAt)
+                    .ToListAsync();
+        }
+
+        public async Task<Order?> GetByIdForAdminAsync(int id)
+        {
+            return await _dbSet
+                    .AsNoTracking()
+                    .Include(m => m.Items)
+                    .Include(m => m.User)
+                    .FirstOrDefaultAsync(m => m.Id == id);
+        }
+
+        public async Task<bool> ChangeStatusAsync(int id, OrderStatus from, OrderStatus to)
+        {
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync();
+
+            // Şərt bazada yoxlanılır: sifariş artıq başqa statusa keçibsə heç nə dəyişmir
+            var changed = await _dbSet
+                    .Where(m => m.Id == id && m.Status == from)
+                    .ExecuteUpdateAsync(s => s.SetProperty(m => m.Status, to));
+
+            if (changed == 0)
+            {
+                await transaction.RollbackAsync();
+                return false;
+            }
+
+            if (to == OrderStatus.Cancelled)
+            {
+                // Ləğv olunan sifarişin məhsulları stoka qayıdır
+                var items = await _dbContext.OrderItems
+                        .AsNoTracking()
+                        .Where(m => m.OrderId == id)
+                        .ToListAsync();
+
+                foreach (var item in items)
+                {
+                    await _dbContext.Products
+                            .Where(p => p.Id == item.ProductId)
+                            .ExecuteUpdateAsync(s => s.SetProperty(p => p.Stock, p => p.Stock + item.Quantity));
+                }
+            }
+
+            await transaction.CommitAsync();
+            return true;
+        }
+
         public async Task<OrderPlaceResult> PlaceAsync(OrderPlan plan)
         {
             _dbContext.ChangeTracker.Clear();

@@ -1,9 +1,13 @@
 using Domain.Entities;
+using Domain.Enums;
 using FluentValidation;
 using Repository.Repositories.Interfaces;
 using Repository.Results;
+using Service.Helpers;
 using Service.Helpers.DTOs.Orders;
+using Service.Helpers.Exceptions;
 using Service.Helpers.Responses;
+using Service.Helpers.Validators;
 using Service.Services.Interfaces;
 
 namespace Service.Services
@@ -13,14 +17,17 @@ namespace Service.Services
         private readonly IOrderRepository _orderRepo;
         private readonly IAddressRepository _addressRepo;
         private readonly IValidator<CreateOrderDto> _createValidator;
+        private readonly IValidator<UpdateOrderStatusDto> _statusValidator;
 
         public OrderService(IOrderRepository orderRepo,
                             IAddressRepository addressRepo,
-                            IValidator<CreateOrderDto> createValidator)
+                            IValidator<CreateOrderDto> createValidator,
+                            IValidator<UpdateOrderStatusDto> statusValidator)
         {
             _orderRepo = orderRepo;
             _addressRepo = addressRepo;
             _createValidator = createValidator;
+            _statusValidator = statusValidator;
         }
 
         public async Task<IEnumerable<OrderDto>> GetAllAsync(string userId)
@@ -68,6 +75,82 @@ namespace Service.Services
                 OrderOutcome.InsufficientStock => ServiceResult<OrderDto>.Fail($"Not enough stock for {result.Message}."),
                 _ => ServiceResult<OrderDto>.Fail("The order could not be placed.")
             };
+        }
+
+        public async Task<IEnumerable<AdminOrderDto>> GetAllForAdminAsync(string? status, string? search)
+        {
+            OrderStatus? filter = null;
+            if (!string.IsNullOrWhiteSpace(status))
+            {
+                if (!Enum.TryParse<OrderStatus>(status, true, out var parsed) || int.TryParse(status, out _))
+                {
+                    throw new BadRequestException("This status is not known.");
+                }
+                filter = parsed;
+            }
+
+            var orders = await _orderRepo.GetAllForAdminAsync(filter);
+
+            // Axtarış: sifariş nömrəsi, müştərinin adı, emaili və ya alıcının adı/telefonu
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var text = search.Trim().TrimStart('#');
+                orders = orders.Where(m =>
+                        m.Id.ToString() == text ||
+                        (m.User.Email ?? string.Empty).Contains(text, StringComparison.OrdinalIgnoreCase) ||
+                        (m.User.Name + " " + m.User.Surname).Contains(text, StringComparison.OrdinalIgnoreCase) ||
+                        m.DeliveryFullName.Contains(text, StringComparison.OrdinalIgnoreCase) ||
+                        m.DeliveryPhone.Contains(text, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+            }
+
+            return orders.Select(ToAdminDto);
+        }
+
+        public async Task<AdminOrderDto> GetByIdForAdminAsync(int id)
+        {
+            var order = await _orderRepo.GetByIdForAdminAsync(id);
+            if (order is null)
+            {
+                throw new NotFoundException();
+            }
+
+            return ToAdminDto(order);
+        }
+
+        public async Task ChangeStatusAsync(int id, UpdateOrderStatusDto model)
+        {
+            await _statusValidator.EnsureValidAsync(model);
+            var to = Enum.Parse<OrderStatus>(model.Status!, true);
+
+            var order = await _orderRepo.GetByIdForAdminAsync(id);
+            if (order is null)
+            {
+                throw new NotFoundException();
+            }
+
+            // Yalnız icazə verilən addım: Pending -> Processing -> Shipped -> Delivered, ləğv göndərilməmiş sifarişdə
+            if (!OrderStatusFlow.CanMove(order.Status, to))
+            {
+                throw new BadRequestException($"The order can't move from {order.Status} to {to}.");
+            }
+
+            if (!await _orderRepo.ChangeStatusAsync(id, order.Status, to))
+            {
+                throw new BadRequestException("The order status was changed by someone else. Refresh the page.");
+            }
+        }
+
+        private static AdminOrderDto ToAdminDto(Order order)
+        {
+            var dto = new AdminOrderDto();
+            Fill(dto, order, order.Items);
+            dto.UserId = order.UserId;
+            dto.CustomerName = (order.User.Name + " " + order.User.Surname).Trim();
+            dto.CustomerEmail = order.User.Email ?? string.Empty;
+            dto.ItemCount = order.Items.Sum(m => m.Quantity);
+            dto.NextStatuses = OrderStatusFlow.NextOf(order.Status).Select(m => m.ToString()).ToList();
+            return dto;
         }
 
         private static OrderDto ToDto(Order order, IEnumerable<OrderItem> items)

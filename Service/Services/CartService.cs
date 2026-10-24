@@ -43,7 +43,8 @@ namespace Service.Services
             }
 
             var product = await _productRepo.GetByIdAsync(model.ProductId);
-            if (product is null)
+            // Gizli məhsul saytda yoxdur: səbətə də əlavə olunmur
+            if (product is null || !product.IsVisible)
             {
                 return ServiceResult<CartDto>.Fail("Product not found.");
             }

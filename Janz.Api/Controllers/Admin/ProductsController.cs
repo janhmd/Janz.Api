@@ -22,13 +22,13 @@ namespace Janz.Api.Controllers.Admin
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            return Ok(await _productService.GetAllAsync());
+            return Ok(await _productService.GetAllAsync(includeHidden: true));
         }
 
         [HttpGet("{id:int}")]
         public async Task<IActionResult> GetById([FromRoute] int id)
         {
-            return Ok(await _productService.GetByIdAsync(id));
+            return Ok(await _productService.GetByIdAsync(id, includeHidden: true));
         }
 
         [HttpPost]

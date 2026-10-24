@@ -43,10 +43,11 @@ namespace Service.Services
             _updateValidator = updateValidator;
         }
 
-        public async Task<IEnumerable<ProductDto>> GetAllAsync()
+        // Sayt yalnız görünən məhsulları alır, admin panel hamısını (includeHidden)
+        public async Task<IEnumerable<ProductDto>> GetAllAsync(bool includeHidden = false)
         {
             var products = await _productRepo.GetAllAsync();
-            return await MapProductsAsync(products);
+            return await MapProductsAsync(products.Where(m => includeHidden || m.IsVisible));
         }
 
         public async Task<IEnumerable<ProductDto>> GetByCategorySlugAsync(string slug)
@@ -61,13 +62,13 @@ namespace Service.Services
             }
 
             var products = await _productRepo.GetAllAsync();
-            return await MapProductsAsync(products.Where(m => m.CategoryId == category.Id));
+            return await MapProductsAsync(products.Where(m => m.CategoryId == category.Id && m.IsVisible));
         }
 
-        public async Task<ProductDto> GetByIdAsync(int id)
+        public async Task<ProductDto> GetByIdAsync(int id, bool includeHidden = false)
         {
             var product = await _productRepo.GetByIdAsync(id);
-            if (product is null)
+            if (product is null || (!product.IsVisible && !includeHidden))
             {
                 throw new NotFoundException();
             }
@@ -109,12 +110,13 @@ namespace Service.Services
                     CategoryId = model.CategoryId,
                     ImagePath = imagePath
                 };
+                ApplyDetails(product, model, model.IsVisible);
                 await _productRepo.AddAsync(product);
 
                 await AddGalleryAsync(product.Id, uploaded.Skip(1), 0);
                 await SetTagsAsync(product.Id, model.TagIds);
 
-                return await GetByIdAsync(product.Id);
+                return await GetByIdAsync(product.Id, includeHidden: true);
             }
             catch
             {
@@ -169,6 +171,7 @@ namespace Service.Services
                 product.Price = model.Price;
                 product.Stock = model.Stock;
                 product.CategoryId = model.CategoryId;
+                ApplyDetails(product, model, model.IsVisible);
                 if (newImage is not null)
                 {
                     product.ImagePath = newImage;
@@ -232,6 +235,25 @@ namespace Service.Services
             {
                 await _fileService.DeleteFileAsync(path);
             }
+        }
+
+        // Boş mətn null kimi saxlanılır ki, məhsul səhifəsi boş blok göstərməsin
+        private static void ApplyDetails(Product product, IProductDetails model, bool isVisible)
+        {
+            product.OldPrice = model.OldPrice;
+            product.Badge = Clean(model.Badge);
+            product.IsVisible = isVisible;
+            product.Roast = Clean(model.Roast);
+            product.Region = Clean(model.Region);
+            product.Processing = Clean(model.Processing);
+            product.Caffeine = Clean(model.Caffeine);
+            product.Brewing = Clean(model.Brewing);
+            product.Storage = Clean(model.Storage);
+        }
+
+        private static string? Clean(string? value)
+        {
+            return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
         }
 
         private async Task EnsureCategoryAndTagsAsync(int categoryId, List<int> tagIds)
@@ -329,6 +351,15 @@ namespace Service.Services
             dto.Price = product.Price;
             dto.Stock = product.Stock;
             dto.ImagePath = product.ImagePath;
+            dto.OldPrice = product.OldPrice;
+            dto.Badge = product.Badge;
+            dto.IsVisible = product.IsVisible;
+            dto.Roast = product.Roast;
+            dto.Region = product.Region;
+            dto.Processing = product.Processing;
+            dto.Caffeine = product.Caffeine;
+            dto.Brewing = product.Brewing;
+            dto.Storage = product.Storage;
             dto.CategoryId = category.Id;
             dto.CategoryName = category.Name;
             dto.CategorySlug = category.Slug;

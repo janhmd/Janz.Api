@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Http;
 namespace Service.Helpers.DTOs.Products
 {
     // Admin: yeni məhsul (multipart/form-data ilə gəlir, çünki şəkil də var)
-    public class CreateProductDto
+    public class CreateProductDto : IProductDetails
     {
         public string? Name { get; set; }
         public string? Description { get; set; }
@@ -11,6 +11,19 @@ namespace Service.Helpers.DTOs.Products
         public int Stock { get; set; }
         public int CategoryId { get; set; }
         public List<int> TagIds { get; set; } = new List<int>();
+
+        // Endirim, nişan və görünmə
+        public decimal? OldPrice { get; set; }
+        public string? Badge { get; set; }
+        public bool IsVisible { get; set; } = true;
+
+        // Məhsul səhifəsindəki bloklar (hamısı istəyə bağlıdır)
+        public string? Roast { get; set; }
+        public string? Region { get; set; }
+        public string? Processing { get; set; }
+        public string? Caffeine { get; set; }
+        public string? Brewing { get; set; }
+        public string? Storage { get; set; }
 
         // Əsas şəkil (kartda görünən). Boş olarsa FileService-in "Choose an image." mesajı qayıdır
         public IFormFile? Image { get; set; }

@@ -22,5 +22,13 @@ namespace Service.Helpers.Validators
                 .Must(value => string.IsNullOrWhiteSpace(value) || value.Trim().Length <= maxLength)
                     .WithMessage($"The {name} can be at most {maxLength} characters.");
         }
+
+        // Boş ola bilər, yazılıbsa limiti keçməməlidir
+        public static IRuleBuilderOptions<T, string?> OptionalText<T>(this IRuleBuilder<T, string?> rule, string name, int maxLength)
+        {
+            return rule
+                .Must(value => string.IsNullOrWhiteSpace(value) || value.Trim().Length <= maxLength)
+                    .WithMessage($"The {name} can be at most {maxLength} characters.");
+        }
     }
 }

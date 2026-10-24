@@ -21,6 +21,8 @@ namespace Service.Helpers.Validators.Products
             RuleFor(m => m.CategoryId)
                 .GreaterThan(0).WithMessage("Choose a category.");
 
+            Include(new ProductDetailsValidator());
+
             RuleFor(m => m.Gallery)
                 .Must(list => list.Count <= ProductRules.MaxGallery)
                 .WithMessage($"The gallery can have at most {ProductRules.MaxGallery} images.");

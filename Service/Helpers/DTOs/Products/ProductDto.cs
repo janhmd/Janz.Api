@@ -19,6 +19,8 @@ namespace Service.Helpers.DTOs.Products
         public string? Caffeine { get; set; }
         public string? Brewing { get; set; }
         public string? Storage { get; set; }
+        public List<string> BrewMethods { get; set; } = new List<string>();
+        public List<ProductVariantDto> Variants { get; set; } = new List<ProductVariantDto>();
         public int CategoryId { get; set; }
         public string CategoryName { get; set; } = string.Empty;
         public string CategorySlug { get; set; } = string.Empty;

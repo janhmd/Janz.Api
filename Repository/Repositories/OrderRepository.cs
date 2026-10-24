@@ -87,6 +87,14 @@ namespace Repository.Repositories
                     await _dbContext.Products
                             .Where(p => p.Id == item.ProductId)
                             .ExecuteUpdateAsync(s => s.SetProperty(p => p.Stock, p => p.Stock + item.Quantity));
+
+                    // Variant hələ varsa onun stoku da qayıdır
+                    if (item.VariantId is int variantId)
+                    {
+                        await _dbContext.ProductVariants
+                                .Where(v => v.Id == variantId)
+                                .ExecuteUpdateAsync(s => s.SetProperty(v => v.Stock, v => v.Stock + item.Quantity));
+                    }
                 }
             }
 
@@ -102,6 +110,8 @@ namespace Repository.Repositories
             // Səbət bu tranzaksiyada təzədən oxunur: servisdən gələn rəqəmlərə güvənmirik
             var cartItems = await _dbContext.CartItems
                     .Include(m => m.Product)
+                    .Include(m => m.Variant)
+                        .ThenInclude(v => v!.Images)
                     .Where(m => m.UserId == plan.UserId)
                     .ToListAsync();
 
@@ -123,28 +133,46 @@ namespace Repository.Repositories
 
             foreach (var item in cartItems)
             {
-                // Stok yalnız kifayət edirsə azalır (şərt bazada yoxlanılır): eyni anda iki sifariş son məhsulu ala bilməz
-                var changed = await _dbContext.Products
-                        .Where(p => p.Id == item.ProductId && p.Stock >= item.Quantity)
-                        .ExecuteUpdateAsync(s => s.SetProperty(p => p.Stock, p => p.Stock - item.Quantity));
+                // Stok yalnız kifayət edirsə azalır (şərt bazada yoxlanılır): eyni anda iki sifariş son məhsulu ala bilməz.
+                // Variant varsa əvvəl onun stoku, sonra məhsulun ümumi stoku (variantların cəmi) azalır
+                var changed = 1;
+                if (item.VariantId is int variantId)
+                {
+                    changed = await _dbContext.ProductVariants
+                            .Where(v => v.Id == variantId && v.Stock >= item.Quantity)
+                            .ExecuteUpdateAsync(s => s.SetProperty(v => v.Stock, v => v.Stock - item.Quantity));
+                }
+
+                if (changed == 1)
+                {
+                    changed = await _dbContext.Products
+                            .Where(p => p.Id == item.ProductId && p.Stock >= item.Quantity)
+                            .ExecuteUpdateAsync(s => s.SetProperty(p => p.Stock, p => p.Stock - item.Quantity));
+                }
 
                 if (changed == 0)
                 {
                     await transaction.RollbackAsync();
                     _dbContext.ChangeTracker.Clear();
-                    return OrderPlaceResult.Of(OrderOutcome.InsufficientStock, item.Product.Name);
+                    return OrderPlaceResult.Of(OrderOutcome.InsufficientStock, item.Variant is null ? item.Product.Name : $"{item.Product.Name} ({item.Variant.Label})");
                 }
+
+                var price = item.Variant?.Price ?? item.Product.Price;
+                var image = item.Variant?.Images.OrderBy(m => m.Order).Select(m => m.ImagePath).FirstOrDefault() ?? item.Product.ImagePath;
 
                 // Ad, şəkil və qiymət sifariş anındakı kimi saxlanılır (məhsul sonra dəyişsə də sifariş dəyişmir)
                 order.Items.Add(new OrderItem
                 {
                     ProductId = item.ProductId,
                     ProductName = item.Product.Name,
-                    ImagePath = item.Product.ImagePath,
-                    Price = item.Product.Price,
-                    Quantity = item.Quantity
+                    ImagePath = image,
+                    Price = price,
+                    Quantity = item.Quantity,
+                    VariantId = item.VariantId,
+                    VariantLabel = item.Variant?.Label,
+                    Grind = item.Grind
                 });
-                order.Total += item.Product.Price * item.Quantity;
+                order.Total += price * item.Quantity;
             }
 
             _dbContext.Orders.Add(order);

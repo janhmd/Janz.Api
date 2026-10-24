@@ -24,6 +24,11 @@ namespace Service.Helpers.DTOs.Products
         public string? Caffeine { get; set; }
         public string? Brewing { get; set; }
         public string? Storage { get; set; }
+        public List<string> BrewMethods { get; set; } = new List<string>();
+
+        // Variantlar (istəyə bağlı). Varsa Price və Stock onlardan hesablanır
+        public List<ProductVariantFormDto> Variants { get; set; } = new List<ProductVariantFormDto>();
+        public bool HasVariants => Variants.Count > 0;
 
         // Yeni əsas şəkil: göndərilsə köhnəsini əvəz edir
         public IFormFile? Image { get; set; }

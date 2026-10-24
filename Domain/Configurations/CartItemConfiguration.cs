@@ -11,7 +11,10 @@ namespace Domain.Configurations
             builder.Property(m => m.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
             builder.Property(m => m.Quantity).IsRequired();
 
-            builder.HasIndex(m => new { m.UserId, m.ProductId }).IsUnique();
+            builder.Property(m => m.Grind).HasMaxLength(40);
+
+            // Eyni məhsul fərqli variant və ya üyütmə ilə ayrıca sətir olur: birləşdirməni servis edir
+            builder.HasIndex(m => new { m.UserId, m.ProductId });
 
             builder.HasOne(m => m.User)
                 .WithMany()
@@ -22,6 +25,12 @@ namespace Domain.Configurations
                 .WithMany()
                 .HasForeignKey(m => m.ProductId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            // SQL Server bir cədvələ iki cascade yolu icazə vermir: variant silinəndə sətirləri servis silir
+            builder.HasOne(m => m.Variant)
+                .WithMany()
+                .HasForeignKey(m => m.VariantId)
+                .OnDelete(DeleteBehavior.NoAction);
         }
     }
 }

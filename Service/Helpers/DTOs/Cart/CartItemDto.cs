@@ -10,5 +10,8 @@ namespace Service.Helpers.DTOs.Cart
         public int Stock { get; set; }
         public int Quantity { get; set; }
         public decimal Total { get; set; }
+        public int? VariantId { get; set; }
+        public string? VariantLabel { get; set; }
+        public string? Grind { get; set; }
     }
 }

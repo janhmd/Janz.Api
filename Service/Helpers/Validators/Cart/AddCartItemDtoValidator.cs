@@ -1,3 +1,4 @@
+using Domain.Constants;
 using FluentValidation;
 using Service.Helpers.DTOs.Cart;
 
@@ -12,6 +13,10 @@ namespace Service.Helpers.Validators.Cart
 
             RuleFor(m => m.Quantity)
                 .GreaterThan(0).WithMessage("Quantity must be at least 1.");
+
+            RuleFor(m => m.Grind)
+                .Must(grind => string.IsNullOrWhiteSpace(grind) || GrindOptions.All.Contains(grind.Trim()))
+                .WithMessage("Choose a grind from the list.");
         }
     }
 }

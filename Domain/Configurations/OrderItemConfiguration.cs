@@ -12,6 +12,8 @@ namespace Domain.Configurations
             builder.Property(m => m.ImagePath).IsRequired().HasMaxLength(300);
             builder.Property(m => m.Price).HasPrecision(18, 2);
             builder.Property(m => m.Quantity).IsRequired();
+            builder.Property(m => m.VariantLabel).HasMaxLength(100);
+            builder.Property(m => m.Grind).HasMaxLength(40);
             builder.Property(m => m.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
 
             builder.HasOne(m => m.Order)
@@ -23,6 +25,12 @@ namespace Domain.Configurations
                 .WithMany()
                 .HasForeignKey(m => m.ProductId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            // Variant silinəndə sifariş qalır, əlaqə boşalır (servis VariantId-ni null edir)
+            builder.HasOne(m => m.Variant)
+                .WithMany()
+                .HasForeignKey(m => m.VariantId)
+                .OnDelete(DeleteBehavior.NoAction);
         }
     }
 }

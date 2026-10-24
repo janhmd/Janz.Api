@@ -11,6 +11,6 @@ namespace Repository.Repositories.Interfaces
         Task<CartItem?> GetByIdForUserAsync(int id, string userId);
 
         // Eyni məhsul səbətdə artıq varsa həmin sətir (yeni sətir yox, say artırılır). Dəyişdirmək üçün izlənir.
-        Task<CartItem?> GetByProductForUserAsync(int productId, string userId);
+        Task<CartItem?> GetLineForUserAsync(int productId, int? variantId, string? grind, string userId);
     }
 }

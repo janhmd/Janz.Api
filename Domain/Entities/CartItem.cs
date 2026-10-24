@@ -11,5 +11,10 @@ namespace Domain.Entities
         public Product Product { get; set; } = null!;
 
         public int Quantity { get; set; }
+
+        // Variantı olan məhsulda hansı variant seçilib və üyütmə (paket üçün)
+        public int? VariantId { get; set; }
+        public ProductVariant? Variant { get; set; }
+        public string? Grind { get; set; }
     }
 }

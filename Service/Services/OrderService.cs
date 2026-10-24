@@ -196,6 +196,8 @@ namespace Service.Services
             dto.Price = item.Price;
             dto.Quantity = item.Quantity;
             dto.Total = item.Price * item.Quantity;
+            dto.VariantLabel = item.VariantLabel;
+            dto.Grind = item.Grind;
         }
     }
 }

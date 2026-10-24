@@ -24,7 +24,8 @@ namespace Domain.Entities
         public string? Region { get; set; }
         public string? Processing { get; set; }
         public string? Caffeine { get; set; }
-        public string? Brewing { get; set; }
+        public string? Brewing { get; set; }                       // qısa resept (istəyə bağlı)
+        public string? BrewMethods { get; set; }                   // hazırlanma üsulları, vergüllə (Domain/Constants/BrewMethods)
         public string? Storage { get; set; }
 
         public int CategoryId { get; set; }
@@ -32,5 +33,8 @@ namespace Domain.Entities
 
         public ICollection<ProductImage> Images { get; set; } = new List<ProductImage>();
         public ICollection<ProductTag> ProductTags { get; set; } = new List<ProductTag>();
+
+        // Variantlar varsa Price, OldPrice və Stock onlardan hesablanır (ən ucuz variant, stokların cəmi)
+        public ICollection<ProductVariant> Variants { get; set; } = new List<ProductVariant>();
     }
 }

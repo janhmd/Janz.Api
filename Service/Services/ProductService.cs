@@ -1,3 +1,4 @@
+using Domain.Constants;
 using Domain.Entities;
 using FluentValidation;
 using Repository.Repositories.Interfaces;
@@ -18,6 +19,9 @@ namespace Service.Services
         private readonly IBaseRepository<ProductTag> _productTagRepo;
         private readonly IBaseRepository<ProductImage> _productImageRepo;
         private readonly IBaseRepository<OrderItem> _orderItemRepo;
+        private readonly IBaseRepository<ProductVariant> _variantRepo;
+        private readonly IBaseRepository<ProductVariantImage> _variantImageRepo;
+        private readonly IBaseRepository<CartItem> _cartItemRepo;
         private readonly IFileService _fileService;
         private readonly IValidator<CreateProductDto> _createValidator;
         private readonly IValidator<UpdateProductDto> _updateValidator;
@@ -28,6 +32,9 @@ namespace Service.Services
                               IBaseRepository<ProductTag> productTagRepo,
                               IBaseRepository<ProductImage> productImageRepo,
                               IBaseRepository<OrderItem> orderItemRepo,
+                              IBaseRepository<ProductVariant> variantRepo,
+                              IBaseRepository<ProductVariantImage> variantImageRepo,
+                              IBaseRepository<CartItem> cartItemRepo,
                               IFileService fileService,
                               IValidator<CreateProductDto> createValidator,
                               IValidator<UpdateProductDto> updateValidator)
@@ -38,6 +45,9 @@ namespace Service.Services
             _productTagRepo = productTagRepo;
             _productImageRepo = productImageRepo;
             _orderItemRepo = orderItemRepo;
+            _variantRepo = variantRepo;
+            _variantImageRepo = variantImageRepo;
+            _cartItemRepo = cartItemRepo;
             _fileService = fileService;
             _createValidator = createValidator;
             _updateValidator = updateValidator;
@@ -101,6 +111,9 @@ namespace Service.Services
                     uploaded.Add(await _fileService.UploadImageAsync(file, ProductRules.ImageFolder));
                 }
 
+                var galleryPaths = uploaded.Skip(1).ToList();
+                var variantPaths = await UploadVariantImagesAsync(model.Variants, uploaded);
+
                 var product = new Product
                 {
                     Name = model.Name!.Trim(),
@@ -111,10 +124,12 @@ namespace Service.Services
                     ImagePath = imagePath
                 };
                 ApplyDetails(product, model, model.IsVisible);
+                ApplySummary(product, model.Variants);
                 await _productRepo.AddAsync(product);
 
-                await AddGalleryAsync(product.Id, uploaded.Skip(1), 0);
+                await AddGalleryAsync(product.Id, galleryPaths, 0);
                 await SetTagsAsync(product.Id, model.TagIds);
+                await SaveVariantsAsync(product.Id, model.Variants, variantPaths);
 
                 return await GetByIdAsync(product.Id, includeHidden: true);
             }
@@ -154,6 +169,8 @@ namespace Service.Services
             var oldImage = product.ImagePath;
             string? newImage = null;
             var newGallery = new List<string>();
+            var newVariantFiles = new List<string>();
+            var removedVariantFiles = new List<string>();
             try
             {
                 if (model.Image is not null && model.Image.Length > 0)
@@ -166,12 +183,15 @@ namespace Service.Services
                     newGallery.Add(await _fileService.UploadImageAsync(file, ProductRules.ImageFolder));
                 }
 
+                var variantPaths = await UploadVariantImagesAsync(model.Variants, newVariantFiles);
+
                 product.Name = model.Name!.Trim();
                 product.Description = model.Description!.Trim();
                 product.Price = model.Price;
                 product.Stock = model.Stock;
                 product.CategoryId = model.CategoryId;
                 ApplyDetails(product, model, model.IsVisible);
+                ApplySummary(product, model.Variants);
                 if (newImage is not null)
                 {
                     product.ImagePath = newImage;
@@ -181,6 +201,7 @@ namespace Service.Services
                 var nextOrder = gallery.Count == 0 ? 0 : gallery.Max(m => m.Order) + 1;
                 await AddGalleryAsync(id, newGallery, nextOrder);
                 await SetTagsAsync(id, model.TagIds);
+                removedVariantFiles = await SaveVariantsAsync(id, model.Variants, variantPaths);
             }
             catch
             {
@@ -188,7 +209,7 @@ namespace Service.Services
                 {
                     await _fileService.DeleteFileAsync(newImage);
                 }
-                foreach (var path in newGallery)
+                foreach (var path in newGallery.Concat(newVariantFiles))
                 {
                     await _fileService.DeleteFileAsync(path);
                 }
@@ -205,6 +226,12 @@ namespace Service.Services
             if (newImage is not null)
             {
                 await _fileService.DeleteFileAsync(oldImage);
+            }
+
+            // Variantlardan çıxarılan şəkillərin faylları
+            foreach (var path in removedVariantFiles)
+            {
+                await _fileService.DeleteFileAsync(path);
             }
         }
 
@@ -223,17 +250,142 @@ namespace Service.Services
                 throw new BadRequestException("This product is in orders, so it can't be deleted. Set its stock to 0 instead.");
             }
 
+            var variantIds = (await _variantRepo.GetAllAsync()).Where(m => m.ProductId == id).Select(m => m.Id).ToHashSet();
             var images = (await _productImageRepo.GetAllAsync())
                 .Where(m => m.ProductId == id)
                 .Select(m => m.ImagePath)
+                .Concat((await _variantImageRepo.GetAllAsync()).Where(m => variantIds.Contains(m.VariantId)).Select(m => m.ImagePath))
                 .Append(product.ImagePath)
                 .ToList();
 
-            // Əvvəl baza (qalereya, teqlər və səbət sətirləri cascade ilə silinir), sonra fayllar
+            // Səbət sətirləri variantla da bağlıdır (NoAction): məhsuldan əvvəl silinir
+            foreach (var item in (await _cartItemRepo.GetAllAsync()).Where(m => m.ProductId == id))
+            {
+                await _cartItemRepo.DeleteAsync(item);
+            }
+
+            // Əvvəl baza (qalereya, teqlər və variantlar cascade ilə silinir), sonra fayllar
             await _productRepo.DeleteAsync(product);
             foreach (var path in images)
             {
                 await _fileService.DeleteFileAsync(path);
+            }
+        }
+
+        // Variant varsa kartda ən ucuz variantın qiyməti görünür, stok variantların cəmidir
+        private static void ApplySummary(Product product, List<ProductVariantFormDto> variants)
+        {
+            if (variants.Count == 0)
+            {
+                return;
+            }
+
+            var cheapest = variants.OrderBy(m => m.Price).First();
+            product.Price = cheapest.Price;
+            product.OldPrice = cheapest.OldPrice;
+            product.Stock = variants.Sum(m => m.Stock);
+        }
+
+        // Variantların yeni şəkilləri bazaya yazmazdan əvvəl yüklənir; uploaded siyahısı xəta olanda silmək üçündür
+        private async Task<List<List<string>>> UploadVariantImagesAsync(List<ProductVariantFormDto> variants, List<string> uploaded)
+        {
+            var result = new List<List<string>>();
+            foreach (var variant in variants)
+            {
+                var paths = new List<string>();
+                foreach (var file in variant.NewImages.Where(m => m.Length > 0))
+                {
+                    var path = await _fileService.UploadImageAsync(file, ProductRules.ImageFolder);
+                    uploaded.Add(path);
+                    paths.Add(path);
+                }
+                result.Add(paths);
+            }
+            return result;
+        }
+
+        // Formdakı variantlar bazaya yazılır: Id-si olanlar dəyişir, yenilər əlavə olunur, formada olmayanlar silinir.
+        // Qaytarılan siyahı: artıq lazım olmayan şəkil faylları (baza yazılandan sonra silinir)
+        private async Task<List<string>> SaveVariantsAsync(int productId, List<ProductVariantFormDto> forms, List<List<string>> newPaths)
+        {
+            var existing = (await _variantRepo.GetAllAsync()).Where(m => m.ProductId == productId).ToList();
+            var existingIds = existing.Select(m => m.Id).ToHashSet();
+            var images = (await _variantImageRepo.GetAllAsync()).Where(m => existingIds.Contains(m.VariantId)).ToList();
+
+            var filesToDelete = new List<string>();
+            var keptIds = new HashSet<int>();
+
+            for (var i = 0; i < forms.Count; i++)
+            {
+                var form = forms[i];
+                // Başqa məhsulun variant Id-si göndərilsə yeni variant kimi qəbul olunur
+                var variant = form.Id is int formId ? existing.FirstOrDefault(m => m.Id == formId) : null;
+                var isNew = variant is null;
+                variant ??= new ProductVariant { ProductId = productId };
+
+                variant.Format = form.Format!.Trim();
+                variant.Size = Clean(form.Size);
+                variant.Price = form.Price;
+                variant.OldPrice = form.OldPrice;
+                variant.Stock = form.Stock;
+                variant.Order = i;
+
+                if (isNew)
+                {
+                    await _variantRepo.AddAsync(variant);
+                }
+                else
+                {
+                    await _variantRepo.UpdateAsync(variant);
+                    keptIds.Add(variant.Id);
+                }
+
+                // Saxlanılan şəkillər yalnız bu variantın öz şəkilləri arasından seçilir, göndərilən sıra ilə
+                var current = images.Where(m => m.VariantId == variant.Id).ToList();
+                var keep = form.KeepImages.Distinct().Where(path => current.Any(m => m.ImagePath == path)).ToList();
+
+                foreach (var image in current.Where(m => !keep.Contains(m.ImagePath)))
+                {
+                    await _variantImageRepo.DeleteAsync(image);
+                    filesToDelete.Add(image.ImagePath);
+                }
+
+                var order = 0;
+                foreach (var path in keep)
+                {
+                    var image = current.First(m => m.ImagePath == path);
+                    image.Order = order++;
+                    await _variantImageRepo.UpdateAsync(image);
+                }
+
+                foreach (var path in newPaths[i])
+                {
+                    await _variantImageRepo.AddAsync(new ProductVariantImage { VariantId = variant.Id, ImagePath = path, Order = order++ });
+                }
+            }
+
+            foreach (var variant in existing.Where(m => !keptIds.Contains(m.Id)))
+            {
+                await DetachVariantAsync(variant.Id);
+                filesToDelete.AddRange(images.Where(m => m.VariantId == variant.Id).Select(m => m.ImagePath));
+                await _variantRepo.DeleteAsync(variant);
+            }
+
+            return filesToDelete;
+        }
+
+        // Silinən variant: səbətdəki sətirləri silinir, sifarişlərdə isə yazısı qalır, əlaqə boşalır
+        private async Task DetachVariantAsync(int variantId)
+        {
+            foreach (var item in (await _cartItemRepo.GetAllAsync()).Where(m => m.VariantId == variantId))
+            {
+                await _cartItemRepo.DeleteAsync(item);
+            }
+
+            foreach (var item in (await _orderItemRepo.GetAllAsync()).Where(m => m.VariantId == variantId))
+            {
+                item.VariantId = null;
+                await _orderItemRepo.UpdateAsync(item);
             }
         }
 
@@ -249,6 +401,9 @@ namespace Service.Services
             product.Caffeine = Clean(model.Caffeine);
             product.Brewing = Clean(model.Brewing);
             product.Storage = Clean(model.Storage);
+            // Üsullar siyahıdakı sıra ilə saxlanılır ki, səhifədə həmişə eyni sıra ilə görünsün
+            var methods = BrewMethods.All.Where(m => model.BrewMethods.Contains(m)).ToList();
+            product.BrewMethods = methods.Count == 0 ? null : string.Join(",", methods);
         }
 
         private static string? Clean(string? value)
@@ -307,6 +462,8 @@ namespace Service.Services
             var tags = (await _tagRepo.GetAllAsync()).ToDictionary(m => m.Id);
             var productTags = (await _productTagRepo.GetAllAsync()).ToLookup(m => m.ProductId);
             var images = (await _productImageRepo.GetAllAsync()).ToLookup(m => m.ProductId);
+            var variants = (await _variantRepo.GetAllAsync()).ToLookup(m => m.ProductId);
+            var variantImages = (await _variantImageRepo.GetAllAsync()).ToLookup(m => m.VariantId);
 
             var result = new List<ProductDto>();
             foreach (var product in products)
@@ -320,10 +477,30 @@ namespace Service.Services
                     .Where(m => tags.ContainsKey(m.TagId))
                     .Select(m => tags[m.TagId]);
 
-                result.Add(ToDto(product, category, productTagList, images[product.Id]));
+                var dto = ToDto(product, category, productTagList, images[product.Id]);
+                dto.Variants = variants[product.Id]
+                    .OrderBy(m => m.Order)
+                    .Select(m => ToDto(m, variantImages[m.Id]))
+                    .ToList();
+                result.Add(dto);
             }
 
             return result;
+        }
+
+        private static ProductVariantDto ToDto(ProductVariant variant, IEnumerable<ProductVariantImage> images)
+        {
+            return new ProductVariantDto
+            {
+                Id = variant.Id,
+                Format = variant.Format,
+                Size = variant.Size,
+                Label = variant.Label,
+                Price = variant.Price,
+                OldPrice = variant.OldPrice,
+                Stock = variant.Stock,
+                Images = images.OrderBy(m => m.Order).Select(m => m.ImagePath).ToList()
+            };
         }
 
         private static TagDto ToDto(Tag tag)
@@ -360,6 +537,9 @@ namespace Service.Services
             dto.Caffeine = product.Caffeine;
             dto.Brewing = product.Brewing;
             dto.Storage = product.Storage;
+            dto.BrewMethods = string.IsNullOrEmpty(product.BrewMethods)
+                ? new List<string>()
+                : product.BrewMethods.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList();
             dto.CategoryId = category.Id;
             dto.CategoryName = category.Name;
             dto.CategorySlug = category.Slug;

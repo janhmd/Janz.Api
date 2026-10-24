@@ -11,16 +11,19 @@ namespace Service.Services
     {
         private readonly ICartItemRepository _cartItemRepo;
         private readonly IBaseRepository<Product> _productRepo;
+        private readonly IBaseRepository<ProductVariant> _variantRepo;
         private readonly IValidator<AddCartItemDto> _addValidator;
         private readonly IValidator<UpdateCartItemDto> _updateValidator;
 
         public CartService(ICartItemRepository cartItemRepo,
                            IBaseRepository<Product> productRepo,
+                           IBaseRepository<ProductVariant> variantRepo,
                            IValidator<AddCartItemDto> addValidator,
                            IValidator<UpdateCartItemDto> updateValidator)
         {
             _cartItemRepo = cartItemRepo;
             _productRepo = productRepo;
+            _variantRepo = variantRepo;
             _addValidator = addValidator;
             _updateValidator = updateValidator;
         }
@@ -29,7 +32,7 @@ namespace Service.Services
         {
             // Məhsul Include ilə birlikdə gəlir: bütün məhsul cədvəlini yükləməyə ehtiyac yoxdur
             var items = await _cartItemRepo.GetByUserAsync(userId);
-            var result = items.Select(m => ToDto(m, m.Product)).ToList();
+            var result = items.Select(m => ToDto(m, m.Product, m.Variant)).ToList();
 
             return ToDto(result);
         }
@@ -49,30 +52,45 @@ namespace Service.Services
                 return ServiceResult<CartDto>.Fail("Product not found.");
             }
 
-            var item = await _cartItemRepo.GetByProductForUserAsync(model.ProductId, userId);
+            // Variantı olan məhsulda variant seçilməlidir və bu məhsula aid olmalıdır
+            var variants = (await _variantRepo.GetAllAsync()).Where(m => m.ProductId == product.Id).ToList();
+            ProductVariant? variant = null;
+            if (variants.Count > 0)
+            {
+                variant = variants.FirstOrDefault(m => m.Id == model.VariantId);
+                if (variant is null)
+                {
+                    return ServiceResult<CartDto>.Fail("Choose a variant.");
+                }
+            }
 
+            var grind = string.IsNullOrWhiteSpace(model.Grind) ? null : model.Grind.Trim();
+
+            // Stok variant üzrədir: eyni variantın fərqli üyütmə ilə sətirləri də sayılır
+            var stock = variant?.Stock ?? product.Stock;
+            var inCart = (await _cartItemRepo.GetByUserAsync(userId))
+                .Where(m => m.ProductId == product.Id && m.VariantId == variant?.Id)
+                .Sum(m => m.Quantity);
+            if (inCart + model.Quantity > stock)
+            {
+                return ServiceResult<CartDto>.Fail("Not enough stock.");
+            }
+
+            var item = await _cartItemRepo.GetLineForUserAsync(product.Id, variant?.Id, grind, userId);
             if (item is null)
             {
-                if (model.Quantity > product.Stock)
-                {
-                    return ServiceResult<CartDto>.Fail("Not enough stock.");
-                }
-
                 await _cartItemRepo.AddAsync(new CartItem
                 {
                     UserId = userId,
-                    ProductId = model.ProductId,
+                    ProductId = product.Id,
+                    VariantId = variant?.Id,
+                    Grind = grind,
                     Quantity = model.Quantity
                 });
             }
             else
             {
-                // Eyni məhsul artıq səbətdədir: yeni sətir yox, say artırılır (UserId + ProductId unikal indeksdir)
-                if (item.Quantity + model.Quantity > product.Stock)
-                {
-                    return ServiceResult<CartDto>.Fail("Not enough stock.");
-                }
-
+                // Eyni məhsul, variant və üyütmə artıq səbətdədir: yeni sətir yox, say artırılır
                 item.Quantity += model.Quantity;
                 await _cartItemRepo.UpdateAsync(item);
             }
@@ -100,7 +118,13 @@ namespace Service.Services
                 return ServiceResult<CartDto>.Fail("Product not found.");
             }
 
-            if (model.Quantity > product.Stock)
+            var variant = item.VariantId is int variantId ? await _variantRepo.GetByIdAsync(variantId) : null;
+            var stock = variant?.Stock ?? product.Stock;
+            var otherLines = (await _cartItemRepo.GetByUserAsync(userId))
+                .Where(m => m.Id != item.Id && m.ProductId == item.ProductId && m.VariantId == item.VariantId)
+                .Sum(m => m.Quantity);
+
+            if (otherLines + model.Quantity > stock)
             {
                 return ServiceResult<CartDto>.Fail("Not enough stock.");
             }
@@ -124,23 +148,28 @@ namespace Service.Services
             return ServiceResult<CartDto>.Ok(await GetAsync(userId));
         }
 
-        private static CartItemDto ToDto(CartItem item, Product product)
+        private static CartItemDto ToDto(CartItem item, Product product, ProductVariant? variant)
         {
             var dto = new CartItemDto();
-            Fill(dto, item, product);
+            Fill(dto, item, product, variant);
             return dto;
         }
 
-        private static void Fill(CartItemDto dto, CartItem item, Product product)
+        // Variant varsa qiymət, stok və şəkil variantdan götürülür
+        private static void Fill(CartItemDto dto, CartItem item, Product product, ProductVariant? variant)
         {
+            var price = variant?.Price ?? product.Price;
             dto.Id = item.Id;
             dto.ProductId = product.Id;
             dto.ProductName = product.Name;
-            dto.ImagePath = product.ImagePath;
-            dto.Price = product.Price;
-            dto.Stock = product.Stock;
+            dto.ImagePath = variant?.Images.OrderBy(m => m.Order).Select(m => m.ImagePath).FirstOrDefault() ?? product.ImagePath;
+            dto.Price = price;
+            dto.Stock = variant?.Stock ?? product.Stock;
             dto.Quantity = item.Quantity;
-            dto.Total = product.Price * item.Quantity;
+            dto.Total = price * item.Quantity;
+            dto.VariantId = variant?.Id;
+            dto.VariantLabel = variant?.Label;
+            dto.Grind = item.Grind;
         }
 
         private static CartDto ToDto(List<CartItemDto> items)

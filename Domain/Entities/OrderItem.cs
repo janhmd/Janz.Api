@@ -14,5 +14,11 @@ namespace Domain.Entities
         public string ImagePath { get; set; } = string.Empty;
         public decimal Price { get; set; }
         public int Quantity { get; set; }
+
+        // Variant sifariş anındakı kimi yazı ilə saxlanılır: variant sonra silinsə də sifarişdə görünür
+        public int? VariantId { get; set; }
+        public ProductVariant? Variant { get; set; }
+        public string? VariantLabel { get; set; }
+        public string? Grind { get; set; }
     }
 }

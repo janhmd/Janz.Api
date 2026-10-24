@@ -21,6 +21,7 @@ namespace Domain.Configurations
             builder.Property(m => m.Caffeine).HasMaxLength(20);
             builder.Property(m => m.Brewing).HasMaxLength(1000);
             builder.Property(m => m.Storage).HasMaxLength(500);
+            builder.Property(m => m.BrewMethods).HasMaxLength(300);
             builder.Property(m => m.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
 
             builder.HasOne(m => m.Category)

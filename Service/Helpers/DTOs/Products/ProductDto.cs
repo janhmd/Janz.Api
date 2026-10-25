@@ -26,6 +26,10 @@ namespace Service.Helpers.DTOs.Products
         public int? Density { get; set; }
         public int? Acidity { get; set; }
         public string? TasteGroup { get; set; }
+
+        // Görünən rəylərdən: kartda ⭐ 4.6 · 687
+        public decimal? Rating { get; set; }
+        public int ReviewCount { get; set; }
         public List<ProductVariantDto> Variants { get; set; } = new List<ProductVariantDto>();
         public int CategoryId { get; set; }
         public string CategoryName { get; set; } = string.Empty;

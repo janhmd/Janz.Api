@@ -14,6 +14,7 @@ public class AppDbContext : IdentityDbContext<AppUser>
     public DbSet<ProductImage> ProductImages { get; set; }
     public DbSet<ProductVariant> ProductVariants { get; set; }
     public DbSet<ProductVariantImage> ProductVariantImages { get; set; }
+    public DbSet<ProductReview> ProductReviews { get; set; }
     public DbSet<CartItem> CartItems { get; set; }
     public DbSet<Order> Orders { get; set; }
     public DbSet<OrderItem> OrderItems { get; set; }

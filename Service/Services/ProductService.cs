@@ -21,6 +21,7 @@ namespace Service.Services
         private readonly IBaseRepository<OrderItem> _orderItemRepo;
         private readonly IBaseRepository<ProductVariant> _variantRepo;
         private readonly IBaseRepository<ProductVariantImage> _variantImageRepo;
+        private readonly IBaseRepository<ProductReview> _reviewRepo;
         private readonly IBaseRepository<CartItem> _cartItemRepo;
         private readonly IFileService _fileService;
         private readonly IValidator<CreateProductDto> _createValidator;
@@ -35,6 +36,7 @@ namespace Service.Services
                               IBaseRepository<ProductVariant> variantRepo,
                               IBaseRepository<ProductVariantImage> variantImageRepo,
                               IBaseRepository<CartItem> cartItemRepo,
+                              IBaseRepository<ProductReview> reviewRepo,
                               IFileService fileService,
                               IValidator<CreateProductDto> createValidator,
                               IValidator<UpdateProductDto> updateValidator)
@@ -47,6 +49,7 @@ namespace Service.Services
             _orderItemRepo = orderItemRepo;
             _variantRepo = variantRepo;
             _variantImageRepo = variantImageRepo;
+            _reviewRepo = reviewRepo;
             _cartItemRepo = cartItemRepo;
             _fileService = fileService;
             _createValidator = createValidator;
@@ -472,6 +475,7 @@ namespace Service.Services
             var images = (await _productImageRepo.GetAllAsync()).ToLookup(m => m.ProductId);
             var variants = (await _variantRepo.GetAllAsync()).ToLookup(m => m.ProductId);
             var variantImages = (await _variantImageRepo.GetAllAsync()).ToLookup(m => m.VariantId);
+            var reviews = (await _reviewRepo.GetAllAsync()).Where(m => !m.IsHidden).ToLookup(m => m.ProductId);
 
             var result = new List<ProductDto>();
             foreach (var product in products)
@@ -490,6 +494,9 @@ namespace Service.Services
                     .OrderBy(m => m.Order)
                     .Select(m => ToDto(m, variantImages[m.Id]))
                     .ToList();
+                var productReviews = reviews[product.Id].ToList();
+                dto.ReviewCount = productReviews.Count;
+                dto.Rating = productReviews.Count == 0 ? null : Math.Round((decimal)productReviews.Average(m => m.Rating), 1);
                 result.Add(dto);
             }
 

@@ -22,6 +22,10 @@ namespace Domain.Configurations
             builder.Property(m => m.Brewing).HasMaxLength(1000);
             builder.Property(m => m.Storage).HasMaxLength(500);
             builder.Property(m => m.BrewMethods).HasMaxLength(300);
+            builder.Property(m => m.Use).HasMaxLength(50);
+            builder.Property(m => m.Taste).HasMaxLength(60);
+            builder.Property(m => m.Notes).HasMaxLength(200);
+            builder.Property(m => m.TasteGroup).HasMaxLength(30);
             builder.Property(m => m.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
 
             builder.HasOne(m => m.Category)

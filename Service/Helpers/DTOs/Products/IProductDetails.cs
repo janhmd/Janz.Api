@@ -12,6 +12,12 @@ namespace Service.Helpers.DTOs.Products
         string? Caffeine { get; }
         string? Brewing { get; }
         string? Storage { get; }
+        string? Use { get; }
+        string? Taste { get; }
+        string? Notes { get; }
+        int? Density { get; }
+        int? Acidity { get; }
+        string? TasteGroup { get; }
         List<string> BrewMethods { get; }
         List<ProductVariantFormDto> Variants { get; }
         bool HasVariants { get; }

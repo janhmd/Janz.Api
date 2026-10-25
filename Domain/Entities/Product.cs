@@ -28,6 +28,14 @@ namespace Domain.Entities
         public string? BrewMethods { get; set; }                   // hazırlanma üsulları, vergüllə (Domain/Constants/BrewMethods)
         public string? Storage { get; set; }
 
+        // Kartdakı qısa dad təsviri: "For espresso", "Dense coffee with notes of nuts, chocolate and caramel"
+        public string? Use { get; set; }                           // təyinat, kartın yuxarısında
+        public string? Taste { get; set; }                         // cümlənin əvvəli, məs. "Dense coffee"
+        public string? Notes { get; set; }                         // notlar, vergüllə
+        public int? Density { get; set; }                          // 0-100, kartdakı zolaq və filtr
+        public int? Acidity { get; set; }                          // 0-100
+        public string? TasteGroup { get; set; }                    // Domain/Constants/TasteGroups
+
         public int CategoryId { get; set; }
         public Category Category { get; set; } = null!;
 

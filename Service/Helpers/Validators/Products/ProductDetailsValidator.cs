@@ -27,6 +27,21 @@ namespace Service.Helpers.Validators.Products
             RuleFor(m => m.Brewing).OptionalText("brewing text", 1000);
             RuleFor(m => m.Storage).OptionalText("storage text", 500);
 
+            RuleFor(m => m.Use).OptionalText("use", 50);
+            RuleFor(m => m.Taste).OptionalText("taste", 60);
+            RuleFor(m => m.Notes).OptionalText("notes", 150);
+
+            RuleFor(m => m.Density)
+                .InclusiveBetween(0, 100).WithMessage("The density must be from 0 to 100.")
+                .When(m => m.Density is not null);
+            RuleFor(m => m.Acidity)
+                .InclusiveBetween(0, 100).WithMessage("The acidity must be from 0 to 100.")
+                .When(m => m.Acidity is not null);
+
+            RuleFor(m => m.TasteGroup)
+                .Must(group => string.IsNullOrWhiteSpace(group) || TasteGroups.All.Contains(group.Trim()))
+                .WithMessage("Choose a taste group from the list.");
+
             RuleFor(m => m.BrewMethods)
                 .Must(list => list.All(m => BrewMethods.All.Contains(m)))
                 .WithMessage("Choose brewing methods from the list.");

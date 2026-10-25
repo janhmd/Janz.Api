@@ -401,6 +401,14 @@ namespace Service.Services
             product.Caffeine = Clean(model.Caffeine);
             product.Brewing = Clean(model.Brewing);
             product.Storage = Clean(model.Storage);
+            product.Use = Clean(model.Use);
+            product.Taste = Clean(model.Taste);
+            // Notlar vergüllə saxlanılır: boşluqlar və boş notlar atılır
+            var notes = (model.Notes ?? string.Empty).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            product.Notes = notes.Length == 0 ? null : string.Join(", ", notes);
+            product.Density = model.Density;
+            product.Acidity = model.Acidity;
+            product.TasteGroup = Clean(model.TasteGroup);
             // Üsullar siyahıdakı sıra ilə saxlanılır ki, səhifədə həmişə eyni sıra ilə görünsün
             var methods = BrewMethods.All.Where(m => model.BrewMethods.Contains(m)).ToList();
             product.BrewMethods = methods.Count == 0 ? null : string.Join(",", methods);
@@ -540,6 +548,14 @@ namespace Service.Services
             dto.BrewMethods = string.IsNullOrEmpty(product.BrewMethods)
                 ? new List<string>()
                 : product.BrewMethods.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList();
+            dto.Use = product.Use;
+            dto.Taste = product.Taste;
+            dto.Notes = string.IsNullOrEmpty(product.Notes)
+                ? new List<string>()
+                : product.Notes.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+            dto.Density = product.Density;
+            dto.Acidity = product.Acidity;
+            dto.TasteGroup = product.TasteGroup;
             dto.CategoryId = category.Id;
             dto.CategoryName = category.Name;
             dto.CategorySlug = category.Slug;

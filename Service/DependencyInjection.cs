@@ -13,6 +13,7 @@ namespace Service
         {
             services.AddScoped<JwtTokenGenerator>();
             services.AddScoped<IAccountService, AccountService>();
+            services.AddScoped<IEmailService, EmailService>();
             services.AddScoped<IProductService, ProductService>();
             services.AddScoped<ICartService, CartService>();
             services.AddScoped<IOrderService, OrderService>();

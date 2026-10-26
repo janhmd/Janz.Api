@@ -6,6 +6,7 @@ namespace Service.Services.Interfaces
     {
         Task<IEnumerable<ProductDto>> GetAllAsync(bool includeHidden = false);
         Task<IEnumerable<ProductDto>> GetByCategorySlugAsync(string slug);
+        Task<IEnumerable<ProductDto>> SearchAsync(ProductFilterDto filter);
         Task<ProductDto> GetByIdAsync(int id, bool includeHidden = false);
 
         // Admin panel

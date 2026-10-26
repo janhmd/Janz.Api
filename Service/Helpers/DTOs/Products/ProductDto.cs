@@ -30,6 +30,7 @@ namespace Service.Helpers.DTOs.Products
         // Görünən rəylərdən: kartda ⭐ 4.6 · 687
         public decimal? Rating { get; set; }
         public int ReviewCount { get; set; }
+        public DateTime CreatedAt { get; set; }
         public List<ProductVariantDto> Variants { get; set; } = new List<ProductVariantDto>();
         public int CategoryId { get; set; }
         public string CategoryName { get; set; } = string.Empty;

@@ -78,6 +78,13 @@ namespace Service.Services
             return await MapProductsAsync(products.Where(m => m.CategoryId == category.Id && m.IsVisible));
         }
 
+        // Saytdakı kataloq: yalnız görünən məhsullar, filtrlər ProductCatalogFilter-dadır
+        public async Task<IEnumerable<ProductDto>> SearchAsync(ProductFilterDto filter)
+        {
+            var products = (await _productRepo.GetAllAsync()).Where(m => m.IsVisible);
+            return ProductCatalogFilter.Apply(await MapProductsAsync(products), filter);
+        }
+
         public async Task<ProductDto> GetByIdAsync(int id, bool includeHidden = false)
         {
             var product = await _productRepo.GetByIdAsync(id);
@@ -555,6 +562,7 @@ namespace Service.Services
             dto.BrewMethods = string.IsNullOrEmpty(product.BrewMethods)
                 ? new List<string>()
                 : product.BrewMethods.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList();
+            dto.CreatedAt = product.CreatedAt;
             dto.Use = product.Use;
             dto.Taste = product.Taste;
             dto.Notes = string.IsNullOrEmpty(product.Notes)

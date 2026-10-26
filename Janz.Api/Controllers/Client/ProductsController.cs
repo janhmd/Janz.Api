@@ -1,3 +1,4 @@
+using Service.Helpers.DTOs.Products;
 using Microsoft.AspNetCore.Mvc;
 using Service.Services.Interfaces;
 
@@ -14,10 +15,11 @@ namespace Janz.Api.Controllers.Client
             _productService = productService;
         }
 
+        // Filtrsiz çağırılanda bütün görünən məhsullar qayıdır (əvvəlki kimi)
         [HttpGet]
-        public async Task<IActionResult> GetAll()
+        public async Task<IActionResult> GetAll([FromQuery] ProductFilterDto filter)
         {
-            return Ok(await _productService.GetAllAsync());
+            return Ok(await _productService.SearchAsync(filter));
         }
 
         [HttpGet("category/{slug}")]

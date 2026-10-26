@@ -13,5 +13,10 @@ namespace Service.Services.Interfaces
         Task<ShopReviewsDto> GetShopReviewsAsync(int skip, int take);
         Task<OrderReviewDto> GetForOrderAsync(int orderId, string userId);
         Task<ShopReviewDto> SaveForOrderAsync(int orderId, string userId, SaveShopReviewDto model);
+
+        // Admin panel: type = product / shop / boş (hamısı), hidden = yalnız gizlilər və ya yalnız görünənlər
+        Task<IEnumerable<AdminReviewDto>> GetAllForAdminAsync(string? type, bool? hidden, string? search);
+        Task SetHiddenAsync(string type, int id, bool hidden);
+        Task DeleteAsync(string type, int id);
     }
 }

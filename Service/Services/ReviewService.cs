@@ -102,6 +102,109 @@ namespace Service.Services
             return ToDto(review, await AuthorNamesAsync(new[] { userId }), await AuthorLevelsAsync(new[] { userId }));
         }
 
+        public async Task<IEnumerable<AdminReviewDto>> GetAllForAdminAsync(string? type, bool? hidden, string? search)
+        {
+            var result = new List<AdminReviewDto>();
+            var products = (await _productRepo.GetAllAsync()).ToDictionary(m => m.Id, m => m.Name);
+
+            if (type is null || type == "product")
+            {
+                foreach (var review in await _productReviewRepo.GetAllAsync())
+                {
+                    result.Add(new AdminReviewDto
+                    {
+                        Id = review.Id,
+                        Type = "product",
+                        ProductId = review.ProductId,
+                        ProductName = products.TryGetValue(review.ProductId, out var name) ? name : null,
+                        Rating = review.Rating,
+                        Text = review.Text,
+                        IsHidden = review.IsHidden,
+                        CreatedAt = review.CreatedAt,
+                        AuthorEmail = review.UserId
+                    });
+                }
+            }
+
+            if (type is null || type == "shop")
+            {
+                foreach (var review in await _shopReviewRepo.GetAllAsync())
+                {
+                    var texts = new[] { review.ShopText, review.DeliveryText, review.Comment }.Where(m => !string.IsNullOrWhiteSpace(m));
+                    result.Add(new AdminReviewDto
+                    {
+                        Id = review.Id,
+                        Type = "shop",
+                        OrderId = review.OrderId,
+                        Rating = review.ShopRating,
+                        DeliveryRating = review.DeliveryRating,
+                        Text = texts.Any() ? string.Join(" · ", texts) : null,
+                        IsHidden = review.IsHidden,
+                        CreatedAt = review.CreatedAt,
+                        AuthorEmail = review.UserId
+                    });
+                }
+            }
+
+            // AuthorEmail müvəqqəti UserId saxlayır: indi ad və emaillə əvəz olunur
+            foreach (var userId in result.Select(m => m.AuthorEmail).Distinct().ToList())
+            {
+                var user = await _userManager.FindByIdAsync(userId);
+                foreach (var item in result.Where(m => m.AuthorEmail == userId))
+                {
+                    item.AuthorName = user is null ? "Customer" : $"{user.Name} {user.Surname}".Trim();
+                    item.AuthorEmail = user?.Email ?? string.Empty;
+                }
+            }
+
+            var term = search?.Trim();
+            return result
+                .Where(m => hidden is null || m.IsHidden == hidden)
+                .Where(m => string.IsNullOrEmpty(term)
+                    || m.AuthorName.Contains(term, StringComparison.OrdinalIgnoreCase)
+                    || m.AuthorEmail.Contains(term, StringComparison.OrdinalIgnoreCase)
+                    || (m.ProductName ?? string.Empty).Contains(term, StringComparison.OrdinalIgnoreCase)
+                    || (m.Text ?? string.Empty).Contains(term, StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(m => m.CreatedAt)
+                .ToList();
+        }
+
+        public async Task SetHiddenAsync(string type, int id, bool hidden)
+        {
+            if (type == "product")
+            {
+                var review = await _productReviewRepo.GetByIdAsync(id) ?? throw new NotFoundException();
+                review.IsHidden = hidden;
+                await _productReviewRepo.UpdateAsync(review);
+            }
+            else if (type == "shop")
+            {
+                var review = await _shopReviewRepo.GetByIdAsync(id) ?? throw new NotFoundException();
+                review.IsHidden = hidden;
+                await _shopReviewRepo.UpdateAsync(review);
+            }
+            else
+            {
+                throw new NotFoundException();
+            }
+        }
+
+        public async Task DeleteAsync(string type, int id)
+        {
+            if (type == "product")
+            {
+                await _productReviewRepo.DeleteAsync(await _productReviewRepo.GetByIdAsync(id) ?? throw new NotFoundException());
+            }
+            else if (type == "shop")
+            {
+                await _shopReviewRepo.DeleteAsync(await _shopReviewRepo.GetByIdAsync(id) ?? throw new NotFoundException());
+            }
+            else
+            {
+                throw new NotFoundException();
+            }
+        }
+
         // Başqasının sifarişi tapılmamış kimi qaytarılır
         private async Task<Order> GetOwnOrderAsync(int orderId, string userId)
         {

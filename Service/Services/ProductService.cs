@@ -131,9 +131,24 @@ namespace Service.Services
                     Price = model.Price,
                     Stock = model.Stock,
                     CategoryId = model.CategoryId,
-                    ImagePath = imagePath
+                    ImagePath = imagePath,
+                    OldPrice = model.OldPrice,
+                    Badge = Clean(model.Badge),
+                    IsVisible = model.IsVisible,
+                    Roast = Clean(model.Roast),
+                    Region = Clean(model.Region),
+                    Processing = Clean(model.Processing),
+                    Caffeine = Clean(model.Caffeine),
+                    Brewing = Clean(model.Brewing),
+                    Storage = Clean(model.Storage),
+                    Use = Clean(model.Use),
+                    Taste = Clean(model.Taste),
+                    Notes = CleanNotes(model.Notes),
+                    Density = model.Density,
+                    Acidity = model.Acidity,
+                    TasteGroup = Clean(model.TasteGroup),
+                    BrewMethods = JoinBrewMethods(model.BrewMethods)
                 };
-                ApplyDetails(product, model, model.IsVisible);
                 ApplySummary(product, model.Variants);
                 await _productRepo.AddAsync(product);
 
@@ -200,7 +215,22 @@ namespace Service.Services
                 product.Price = model.Price;
                 product.Stock = model.Stock;
                 product.CategoryId = model.CategoryId;
-                ApplyDetails(product, model, model.IsVisible);
+                product.OldPrice = model.OldPrice;
+                product.Badge = Clean(model.Badge);
+                product.IsVisible = model.IsVisible;
+                product.Roast = Clean(model.Roast);
+                product.Region = Clean(model.Region);
+                product.Processing = Clean(model.Processing);
+                product.Caffeine = Clean(model.Caffeine);
+                product.Brewing = Clean(model.Brewing);
+                product.Storage = Clean(model.Storage);
+                product.Use = Clean(model.Use);
+                product.Taste = Clean(model.Taste);
+                product.Notes = CleanNotes(model.Notes);
+                product.Density = model.Density;
+                product.Acidity = model.Acidity;
+                product.TasteGroup = Clean(model.TasteGroup);
+                product.BrewMethods = JoinBrewMethods(model.BrewMethods);
                 ApplySummary(product, model.Variants);
                 if (newImage is not null)
                 {
@@ -399,31 +429,21 @@ namespace Service.Services
             }
         }
 
-        // Boş mətn null kimi saxlanılır ki, məhsul səhifəsi boş blok göstərməsin
-        private static void ApplyDetails(Product product, IProductDetails model, bool isVisible)
+        // Notlar vergüllə saxlanılır: boşluqlar və boş notlar atılır
+        private static string? CleanNotes(string? value)
         {
-            product.OldPrice = model.OldPrice;
-            product.Badge = Clean(model.Badge);
-            product.IsVisible = isVisible;
-            product.Roast = Clean(model.Roast);
-            product.Region = Clean(model.Region);
-            product.Processing = Clean(model.Processing);
-            product.Caffeine = Clean(model.Caffeine);
-            product.Brewing = Clean(model.Brewing);
-            product.Storage = Clean(model.Storage);
-            product.Use = Clean(model.Use);
-            product.Taste = Clean(model.Taste);
-            // Notlar vergüllə saxlanılır: boşluqlar və boş notlar atılır
-            var notes = (model.Notes ?? string.Empty).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-            product.Notes = notes.Length == 0 ? null : string.Join(", ", notes);
-            product.Density = model.Density;
-            product.Acidity = model.Acidity;
-            product.TasteGroup = Clean(model.TasteGroup);
-            // Üsullar siyahıdakı sıra ilə saxlanılır ki, səhifədə həmişə eyni sıra ilə görünsün
-            var methods = BrewMethods.All.Where(m => model.BrewMethods.Contains(m)).ToList();
-            product.BrewMethods = methods.Count == 0 ? null : string.Join(",", methods);
+            var notes = (value ?? string.Empty).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            return notes.Length == 0 ? null : string.Join(", ", notes);
         }
 
+        // Üsullar siyahıdakı sıra ilə saxlanılır ki, səhifədə həmişə eyni sıra ilə görünsün
+        private static string? JoinBrewMethods(List<string> values)
+        {
+            var methods = BrewMethods.All.Where(m => values.Contains(m)).ToList();
+            return methods.Count == 0 ? null : string.Join(",", methods);
+        }
+
+        // Boş mətn null kimi saxlanılır ki, məhsul səhifəsi boş blok göstərməsin
         private static string? Clean(string? value)
         {
             return string.IsNullOrWhiteSpace(value) ? null : value.Trim();

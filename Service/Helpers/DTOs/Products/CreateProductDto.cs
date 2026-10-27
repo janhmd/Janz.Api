@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Http;
 namespace Service.Helpers.DTOs.Products
 {
     // Admin: yeni məhsul (multipart/form-data ilə gəlir, çünki şəkil də var)
-    public class CreateProductDto : IProductDetails
+    public class CreateProductDto
     {
         public string? Name { get; set; }
         public string? Description { get; set; }

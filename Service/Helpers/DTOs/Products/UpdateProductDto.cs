@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Http;
 namespace Service.Helpers.DTOs.Products
 {
     // Admin: məhsulu dəyişmək. Şəkillər istəyə bağlıdır: göndərilməsə köhnələri qalır
-    public class UpdateProductDto : IProductDetails
+    public class UpdateProductDto
     {
         public string? Name { get; set; }
         public string? Description { get; set; }

@@ -9,6 +9,9 @@ namespace Service.Helpers.Validators.Orders
         {
             RuleFor(m => m.AddressId)
                 .GreaterThan(0).WithMessage("Choose a delivery address.");
+
+            RuleFor(m => m.CouponCode)
+                .MaximumLength(20).WithMessage("This promo code is not valid.");
         }
     }
 }

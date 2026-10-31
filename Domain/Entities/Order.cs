@@ -9,7 +9,11 @@ namespace Domain.Entities
         public AppUser User { get; set; } = null!;
 
         public OrderStatus Status { get; set; }
-        public decimal Total { get; set; }
+        public decimal Total { get; set; }                  // endirim çıxılandan sonra
+
+        // Promo kod: sifariş anındakı kod və endirim məbləği saxlanılır
+        public string? CouponCode { get; set; }
+        public decimal Discount { get; set; }
 
         // Çatdırılma ünvanı sifariş anındakı kimi saxlanılır: istifadəçi ünvanı sonra dəyişsə və ya silsə də sifariş dəyişmir
         public string DeliveryFullName { get; set; } = string.Empty;

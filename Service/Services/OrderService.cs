@@ -63,7 +63,8 @@ namespace Service.Services
                 return ServiceResult<OrderDto>.Fail("Choose a delivery address.");
             }
 
-            var plan = new OrderPlan(userId, address.FullName, address.Phone, address.Line, address.City, address.PostalCode);
+            var couponCode = string.IsNullOrWhiteSpace(model.CouponCode) ? null : model.CouponCode.Trim().ToUpperInvariant();
+            var plan = new OrderPlan(userId, address.FullName, address.Phone, address.Line, address.City, address.PostalCode, couponCode);
 
             // Stok, sifariş və səbət bir tranzaksiyada dəyişir (OrderRepository.PlaceAsync)
             var result = await _orderRepo.PlaceAsync(plan);
@@ -73,6 +74,7 @@ namespace Service.Services
                 OrderOutcome.Success => ServiceResult<OrderDto>.Ok(ToDto(result.Order!, result.Order!.Items)),
                 OrderOutcome.CartEmpty => ServiceResult<OrderDto>.Fail("Cart is empty."),
                 OrderOutcome.InsufficientStock => ServiceResult<OrderDto>.Fail($"Not enough stock for {result.Message}."),
+                OrderOutcome.CouponInvalid => ServiceResult<OrderDto>.Fail("This promo code is not valid for this order."),
                 _ => ServiceResult<OrderDto>.Fail("The order could not be placed.")
             };
         }
@@ -171,6 +173,8 @@ namespace Service.Services
             dto.Id = order.Id;
             dto.Status = order.Status.ToString();
             dto.Total = order.Total;
+            dto.CouponCode = order.CouponCode;
+            dto.Discount = order.Discount;
             dto.CreatedAt = order.CreatedAt;
             dto.DeliveryFullName = order.DeliveryFullName;
             dto.DeliveryPhone = order.DeliveryPhone;

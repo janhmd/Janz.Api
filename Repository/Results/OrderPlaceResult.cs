@@ -6,7 +6,8 @@ namespace Repository.Results
     {
         Success,
         CartEmpty,
-        InsufficientStock      // eyni anda başqa sifariş stoku azaldıb və ya stok kifayət etmir (məhsulun adı Message-dədir)
+        InsufficientStock,     // eyni anda başqa sifariş stoku azaldıb və ya stok kifayət etmir (məhsulun adı Message-dədir)
+        CouponInvalid          // promo kod yoxdur, vaxtı keçib, limiti dolub və ya minimum sifarişə çatmır
     }
 
     // Sifarişin nəticəsi: uğurlu olanda yaranan sifariş (sətirləri ilə) burdadır
@@ -33,5 +34,6 @@ namespace Repository.Results
         string DeliveryPhone,
         string DeliveryLine,
         string DeliveryCity,
-        string DeliveryPostalCode);
+        string DeliveryPostalCode,
+        string? CouponCode);
 }

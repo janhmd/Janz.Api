@@ -5,6 +5,8 @@ namespace Service.Helpers.DTOs.Orders
         public int Id { get; set; }
         public string Status { get; set; } = string.Empty;
         public decimal Total { get; set; }
+        public string? CouponCode { get; set; }
+        public decimal Discount { get; set; }
         public DateTime CreatedAt { get; set; }
         public string DeliveryFullName { get; set; } = string.Empty;
         public string DeliveryPhone { get; set; } = string.Empty;

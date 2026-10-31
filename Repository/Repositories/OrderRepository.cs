@@ -190,7 +190,12 @@ namespace Repository.Repositories
                 var today = DateTime.UtcNow.Date;
                 var total = order.Total;
                 var coupon = await _dbContext.Coupons.AsNoTracking().FirstOrDefaultAsync(m => m.Code == plan.CouponCode);
-                var used = coupon is null ? 0 : await _dbContext.Coupons
+
+                // İlk sifariş kuponu: müştərinin ləğv olunmamış başqa sifarişi olmamalıdır
+                var firstOrderTaken = coupon is not null && coupon.IsFirstOrder
+                    && await _dbSet.AnyAsync(m => m.UserId == plan.UserId && m.Status != OrderStatus.Cancelled);
+
+                var used = coupon is null || firstOrderTaken ? 0 : await _dbContext.Coupons
                         .Where(m => m.Id == coupon.Id && m.IsActive && m.MinOrder <= total
                             && (m.UsageLimit == null || m.UsedCount < m.UsageLimit)
                             && (m.StartsAt == null || m.StartsAt <= today)

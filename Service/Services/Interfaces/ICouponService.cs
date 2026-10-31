@@ -12,6 +12,9 @@ namespace Service.Services.Interfaces
         Task DeleteAsync(int id);
 
         // Səbət: kod bu məbləğə tətbiq oluna bilərmi, endirim nə qədərdir
-        Task<CouponCheckDto> CheckAsync(string? code, decimal total);
+        Task<CouponCheckDto> CheckAsync(string? code, decimal total, string userId);
+
+        // Saytdakı kupon kartı: hələ sifarişi olmayan müştəri üçün aktiv ilk sifariş kuponu (yoxdursa null)
+        Task<CouponDto?> GetFirstOrderAsync(string userId);
     }
 }

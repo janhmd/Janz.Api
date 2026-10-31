@@ -12,14 +12,17 @@ namespace Service.Services
     public class CouponService : ICouponService
     {
         private readonly IBaseRepository<Coupon> _couponRepo;
+        private readonly IBaseRepository<Order> _orderRepo;
         private readonly IValidator<CreateCouponDto> _createValidator;
         private readonly IValidator<UpdateCouponDto> _updateValidator;
 
         public CouponService(IBaseRepository<Coupon> couponRepo,
+                             IBaseRepository<Order> orderRepo,
                              IValidator<CreateCouponDto> createValidator,
                              IValidator<UpdateCouponDto> updateValidator)
         {
             _couponRepo = couponRepo;
+            _orderRepo = orderRepo;
             _createValidator = createValidator;
             _updateValidator = updateValidator;
         }
@@ -63,7 +66,8 @@ namespace Service.Services
                 UsageLimit = model.UsageLimit,
                 StartsAt = model.StartsAt?.Date,
                 EndsAt = model.EndsAt?.Date,
-                IsActive = model.IsActive
+                IsActive = model.IsActive,
+                IsFirstOrder = model.IsFirstOrder
             };
             await _couponRepo.AddAsync(coupon);
 
@@ -91,6 +95,7 @@ namespace Service.Services
             coupon.StartsAt = model.StartsAt?.Date;
             coupon.EndsAt = model.EndsAt?.Date;
             coupon.IsActive = model.IsActive;
+            coupon.IsFirstOrder = model.IsFirstOrder;
             await _couponRepo.UpdateAsync(coupon);
         }
 
@@ -105,7 +110,7 @@ namespace Service.Services
             await _couponRepo.DeleteAsync(coupon);
         }
 
-        public async Task<CouponCheckDto> CheckAsync(string? code, decimal total)
+        public async Task<CouponCheckDto> CheckAsync(string? code, decimal total, string userId)
         {
             var value = code?.Trim().ToUpperInvariant();
             var coupon = string.IsNullOrEmpty(value)
@@ -116,6 +121,12 @@ namespace Service.Services
             if (coupon is null || StatusOf(coupon) != "Active")
             {
                 throw new BadRequestException("This promo code is not valid.");
+            }
+
+            // İlk sifariş kuponu yalnız hələ sifarişi olmayan müştəriyə
+            if (coupon.IsFirstOrder && await HasOrdersAsync(userId))
+            {
+                throw new BadRequestException("This promo code is only for the first order.");
             }
 
             if (total < coupon.MinOrder)
@@ -130,6 +141,27 @@ namespace Service.Services
                 Value = coupon.Value,
                 Discount = DiscountOf(coupon, total)
             };
+        }
+
+        public async Task<CouponDto?> GetFirstOrderAsync(string userId)
+        {
+            if (await HasOrdersAsync(userId))
+            {
+                return null;
+            }
+
+            var coupon = (await _couponRepo.GetAllAsync())
+                .Where(m => m.IsFirstOrder && StatusOf(m) == "Active")
+                .OrderByDescending(m => m.CreatedAt)
+                .FirstOrDefault();
+
+            return coupon is null ? null : ToDto(coupon);
+        }
+
+        // Ləğv olunan sifariş sayılmır
+        private async Task<bool> HasOrdersAsync(string userId)
+        {
+            return (await _orderRepo.GetAllAsync()).Any(m => m.UserId == userId && m.Status != OrderStatus.Cancelled);
         }
 
         // Endirim sifarişin məbləğindən çox ola bilməz
@@ -177,6 +209,7 @@ namespace Service.Services
                 StartsAt = coupon.StartsAt,
                 EndsAt = coupon.EndsAt,
                 IsActive = coupon.IsActive,
+                IsFirstOrder = coupon.IsFirstOrder,
                 Status = StatusOf(coupon),
                 CreatedAt = coupon.CreatedAt
             };

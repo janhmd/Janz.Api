@@ -11,5 +11,6 @@ namespace Service.Helpers.DTOs.Coupons
         public DateTime? StartsAt { get; set; }
         public DateTime? EndsAt { get; set; }
         public bool IsActive { get; set; } = true;
+        public bool IsFirstOrder { get; set; }
     }
 }

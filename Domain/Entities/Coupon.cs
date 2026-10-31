@@ -14,5 +14,6 @@ namespace Domain.Entities
         public DateTime? StartsAt { get; set; }
         public DateTime? EndsAt { get; set; }
         public bool IsActive { get; set; } = true;
+        public bool IsFirstOrder { get; set; }               // yalnız sifarişi olmayan müştəriyə: saytda kupon kartında göstərilir
     }
 }

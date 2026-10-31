@@ -243,6 +243,9 @@ namespace Repository.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("IsFirstOrder")
+                        .HasColumnType("bit");
+
                     b.Property<decimal>("MinOrder")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");

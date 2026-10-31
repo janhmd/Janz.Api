@@ -12,6 +12,7 @@ namespace Service.Helpers.DTOs.Coupons
         public DateTime? StartsAt { get; set; }
         public DateTime? EndsAt { get; set; }
         public bool IsActive { get; set; }
+        public bool IsFirstOrder { get; set; }
         public string Status { get; set; } = string.Empty;   // Active / Scheduled / Expired / Used up / Disabled
         public DateTime CreatedAt { get; set; }
     }

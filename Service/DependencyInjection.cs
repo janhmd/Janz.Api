@@ -25,6 +25,8 @@ namespace Service
             services.AddScoped<IDashboardService, DashboardService>();
             services.AddScoped<IReviewService, ReviewService>();
             services.AddScoped<ICouponService, CouponService>();
+            services.AddScoped<IPaymentService, PaymentService>();
+            services.AddHttpClient();
             services.AddValidatorsFromAssemblyContaining<RegisterDtoValidator>();
             return services;
         }

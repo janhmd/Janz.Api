@@ -7,6 +7,8 @@ namespace Service.Helpers.DTOs.Orders
         public decimal Total { get; set; }
         public string? CouponCode { get; set; }
         public decimal Discount { get; set; }
+        public bool IsPaid { get; set; }
+        public DateTime? PaidAt { get; set; }
         public DateTime CreatedAt { get; set; }
         public string DeliveryFullName { get; set; } = string.Empty;
         public string DeliveryPhone { get; set; } = string.Empty;

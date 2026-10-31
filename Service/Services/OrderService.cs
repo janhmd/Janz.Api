@@ -175,6 +175,8 @@ namespace Service.Services
             dto.Total = order.Total;
             dto.CouponCode = order.CouponCode;
             dto.Discount = order.Discount;
+            dto.IsPaid = order.IsPaid;
+            dto.PaidAt = order.PaidAt;
             dto.CreatedAt = order.CreatedAt;
             dto.DeliveryFullName = order.DeliveryFullName;
             dto.DeliveryPhone = order.DeliveryPhone;

@@ -12,6 +12,7 @@ namespace Domain.Configurations
             builder.Property(m => m.Total).HasPrecision(18, 2);
             builder.Property(m => m.CouponCode).HasMaxLength(20);
             builder.Property(m => m.Discount).HasPrecision(18, 2);
+            builder.Property(m => m.PaymentSessionId).HasMaxLength(200);
 
             // Uzunluqlar AddressConfiguration ilə eynidir (ünvan olduğu kimi köçürülür)
             builder.Property(m => m.DeliveryFullName).IsRequired().HasMaxLength(80);

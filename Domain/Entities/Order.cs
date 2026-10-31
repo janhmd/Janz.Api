@@ -15,6 +15,11 @@ namespace Domain.Entities
         public string? CouponCode { get; set; }
         public decimal Discount { get; set; }
 
+        // Kartla ödəniş (Stripe Checkout): sessiya yaranır, müştəri qayıdanda ödənib-ödənmədiyi Stripe-dan yoxlanılır
+        public bool IsPaid { get; set; }
+        public DateTime? PaidAt { get; set; }
+        public string? PaymentSessionId { get; set; }
+
         // Çatdırılma ünvanı sifariş anındakı kimi saxlanılır: istifadəçi ünvanı sonra dəyişsə və ya silsə də sifariş dəyişmir
         public string DeliveryFullName { get; set; } = string.Empty;
         public string DeliveryPhone { get; set; } = string.Empty;

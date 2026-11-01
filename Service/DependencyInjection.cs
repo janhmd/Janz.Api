@@ -29,6 +29,7 @@ namespace Service
             services.AddScoped<IDiscountLevelService, DiscountLevelService>();
             services.AddScoped<IWishlistService, WishlistService>();
             services.AddScoped<IProfileService, ProfileService>();
+            services.AddScoped<IBalanceService, BalanceService>();
             services.AddHttpClient();
             services.AddValidatorsFromAssemblyContaining<RegisterDtoValidator>();
             return services;

@@ -11,6 +11,7 @@ namespace Domain.Configurations
             builder.Property(m => m.Status).IsRequired();
             builder.Property(m => m.Total).HasPrecision(18, 2);
             builder.Property(m => m.CouponCode).HasMaxLength(20);
+            builder.Property(m => m.LevelName).HasMaxLength(50);
             builder.Property(m => m.Discount).HasPrecision(18, 2);
             builder.Property(m => m.PaymentSessionId).HasMaxLength(200);
 

@@ -174,6 +174,7 @@ namespace Service.Services
             dto.Status = order.Status.ToString();
             dto.Total = order.Total;
             dto.CouponCode = order.CouponCode;
+            dto.LevelName = order.LevelName;
             dto.Discount = order.Discount;
             dto.IsPaid = order.IsPaid;
             dto.PaidAt = order.PaidAt;

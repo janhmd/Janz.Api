@@ -6,6 +6,7 @@ namespace Service.Helpers.DTOs.Orders
         public string Status { get; set; } = string.Empty;
         public decimal Total { get; set; }
         public string? CouponCode { get; set; }
+        public string? LevelName { get; set; }
         public decimal Discount { get; set; }
         public bool IsPaid { get; set; }
         public DateTime? PaidAt { get; set; }

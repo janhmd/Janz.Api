@@ -13,6 +13,7 @@ namespace Domain.Entities
 
         // Promo kod: sifariş anındakı kod və endirim məbləği saxlanılır
         public string? CouponCode { get; set; }
+        public string? LevelName { get; set; }              // endirim səviyyədən gəlibsə onun adı
         public decimal Discount { get; set; }
 
         // Kartla ödəniş (Stripe Checkout): sessiya yaranır, müştəri qayıdanda ödənib-ödənmədiyi Stripe-dan yoxlanılır

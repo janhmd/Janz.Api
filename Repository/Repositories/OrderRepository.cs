@@ -184,37 +184,61 @@ namespace Repository.Repositories
                 order.Total += price * item.Quantity;
             }
 
+            // Səviyyə endirimi: çatdırılmış sifarişlərə xərclənən məbləğə görə (DiscountLevelService-dəki kimi)
+            var total = order.Total;
+            var spent = await _dbSet
+                    .Where(m => m.UserId == plan.UserId && m.Status == OrderStatus.Delivered)
+                    .SumAsync(m => m.Total);
+            var level = await _dbContext.DiscountLevels
+                    .AsNoTracking()
+                    .Where(m => m.MinSpent <= spent)
+                    .OrderByDescending(m => m.MinSpent)
+                    .FirstOrDefaultAsync();
+            var levelDiscount = level is null ? 0 : Math.Round(total * level.Percent / 100, 2);
+
             if (plan.CouponCode is not null)
             {
-                // Kupon yalnız indi də keçərlidirsə istifadə sayı artır (şərt bazada yoxlanılır: limit eyni anda keçilə bilməz)
                 var today = DateTime.UtcNow.Date;
-                var total = order.Total;
                 var coupon = await _dbContext.Coupons.AsNoTracking().FirstOrDefaultAsync(m => m.Code == plan.CouponCode);
 
-                // İlk sifariş kuponu: müştərinin ləğv olunmamış başqa sifarişi olmamalıdır
-                var firstOrderTaken = coupon is not null && coupon.IsFirstOrder
-                    && await _dbSet.AnyAsync(m => m.UserId == plan.UserId && m.Status != OrderStatus.Cancelled);
-
-                var used = coupon is null || firstOrderTaken ? 0 : await _dbContext.Coupons
-                        .Where(m => m.Id == coupon.Id && m.IsActive && m.MinOrder <= total
-                            && (m.UsageLimit == null || m.UsedCount < m.UsageLimit)
-                            && (m.StartsAt == null || m.StartsAt <= today)
-                            && (m.EndsAt == null || m.EndsAt >= today))
-                        .ExecuteUpdateAsync(s => s.SetProperty(m => m.UsedCount, m => m.UsedCount + 1));
-
-                if (used == 0)
-                {
-                    await transaction.RollbackAsync();
-                    _dbContext.ChangeTracker.Clear();
-                    return OrderPlaceResult.Of(OrderOutcome.CouponInvalid);
-                }
-
                 // Endirim CouponService.CheckAsync-dəki kimi hesablanır: məbləğdən çox ola bilməz
-                var discount = coupon!.Type == CouponType.Percent ? Math.Round(total * coupon.Value / 100, 2) : coupon.Value;
-                order.CouponCode = coupon.Code;
-                order.Discount = Math.Min(discount, total);
-                order.Total = total - order.Discount;
+                var couponDiscount = coupon is null ? 0
+                    : Math.Min(coupon.Type == CouponType.Percent ? Math.Round(total * coupon.Value / 100, 2) : coupon.Value, total);
+
+                // Kupon və səviyyə endirimi toplanmır: böyüyü tətbiq olunur. Səviyyə böyükdürsə kupon işlədilmir
+                if (coupon is null || couponDiscount > levelDiscount)
+                {
+                    // İlk sifariş kuponu: müştərinin ləğv olunmamış başqa sifarişi olmamalıdır
+                    var firstOrderTaken = coupon is not null && coupon.IsFirstOrder
+                        && await _dbSet.AnyAsync(m => m.UserId == plan.UserId && m.Status != OrderStatus.Cancelled);
+
+                    // Kupon yalnız indi də keçərlidirsə istifadə sayı artır (şərt bazada yoxlanılır: limit eyni anda keçilə bilməz)
+                    var used = coupon is null || firstOrderTaken ? 0 : await _dbContext.Coupons
+                            .Where(m => m.Id == coupon.Id && m.IsActive && m.MinOrder <= total
+                                && (m.UsageLimit == null || m.UsedCount < m.UsageLimit)
+                                && (m.StartsAt == null || m.StartsAt <= today)
+                                && (m.EndsAt == null || m.EndsAt >= today))
+                            .ExecuteUpdateAsync(s => s.SetProperty(m => m.UsedCount, m => m.UsedCount + 1));
+
+                    if (used == 0)
+                    {
+                        await transaction.RollbackAsync();
+                        _dbContext.ChangeTracker.Clear();
+                        return OrderPlaceResult.Of(OrderOutcome.CouponInvalid);
+                    }
+
+                    order.CouponCode = coupon!.Code;
+                    order.Discount = couponDiscount;
+                }
             }
+
+            if (order.CouponCode is null && levelDiscount > 0)
+            {
+                order.LevelName = level!.Name;
+                order.Discount = levelDiscount;
+            }
+
+            order.Total = total - order.Discount;
 
             _dbContext.Orders.Add(order);
             _dbContext.CartItems.RemoveRange(cartItems);

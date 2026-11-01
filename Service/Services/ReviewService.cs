@@ -20,6 +20,7 @@ namespace Service.Services
         private readonly IValidator<SaveProductReviewDto> _productReviewValidator;
         private readonly IBaseRepository<ShopReview> _shopReviewRepo;
         private readonly IValidator<SaveShopReviewDto> _shopReviewValidator;
+        private readonly IBaseRepository<DiscountLevel> _levelRepo;
 
         public ReviewService(IBaseRepository<ProductReview> productReviewRepo,
                              IBaseRepository<Product> productRepo,
@@ -28,7 +29,8 @@ namespace Service.Services
                              UserManager<AppUser> userManager,
                              IValidator<SaveProductReviewDto> productReviewValidator,
                              IBaseRepository<ShopReview> shopReviewRepo,
-                             IValidator<SaveShopReviewDto> shopReviewValidator)
+                             IValidator<SaveShopReviewDto> shopReviewValidator,
+                             IBaseRepository<DiscountLevel> levelRepo)
         {
             _productReviewRepo = productReviewRepo;
             _productRepo = productRepo;
@@ -38,6 +40,7 @@ namespace Service.Services
             _productReviewValidator = productReviewValidator;
             _shopReviewRepo = shopReviewRepo;
             _shopReviewValidator = shopReviewValidator;
+            _levelRepo = levelRepo;
         }
 
         public async Task<ShopReviewsDto> GetShopReviewsAsync(int skip, int take)
@@ -213,20 +216,18 @@ namespace Service.Services
             return order;
         }
 
-        // Çatdırılmış sifariş sayına görə: 1 - Newcomer, 2-4 - Regular, 5+ - Coffee lover
+        // Endirim səviyyəsinin adı: çatdırılmış sifarişlərə xərclənən məbləğə görə (səviyyə yoxdursa "Customer")
         private async Task<Dictionary<string, string>> AuthorLevelsAsync(IEnumerable<string> userIds)
         {
             var ids = userIds.ToHashSet();
-            var counts = (await _orderRepo.GetAllAsync())
+            var levels = (await _levelRepo.GetAllAsync()).OrderBy(m => m.MinSpent).ToList();
+            var spent = (await _orderRepo.GetAllAsync())
                 .Where(m => ids.Contains(m.UserId) && m.Status == OrderStatus.Delivered)
                 .GroupBy(m => m.UserId)
-                .ToDictionary(m => m.Key, m => m.Count());
+                .ToDictionary(m => m.Key, m => m.Sum(o => o.Total));
 
             return ids.ToDictionary(id => id, id =>
-            {
-                var count = counts.TryGetValue(id, out var value) ? value : 0;
-                return count >= 5 ? "Coffee lover" : count >= 2 ? "Regular" : "Newcomer";
-            });
+                levels.LastOrDefault(m => m.MinSpent <= spent.GetValueOrDefault(id))?.Name ?? "Customer");
         }
 
         private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
@@ -238,7 +239,7 @@ namespace Service.Services
                 Id = review.Id,
                 OrderId = review.OrderId,
                 AuthorName = names.TryGetValue(review.UserId, out var name) && name.Length > 0 ? name : "Customer",
-                AuthorLevel = levels.TryGetValue(review.UserId, out var level) ? level : "Newcomer",
+                AuthorLevel = levels.TryGetValue(review.UserId, out var level) ? level : "Customer",
                 ShopRating = review.ShopRating,
                 ShopText = review.ShopText,
                 DeliveryRating = review.DeliveryRating,

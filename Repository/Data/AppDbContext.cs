@@ -22,6 +22,7 @@ public class AppDbContext : IdentityDbContext<AppUser>
     public DbSet<Address> Addresses { get; set; }
     public DbSet<Coupon> Coupons { get; set; }
     public DbSet<DiscountLevel> DiscountLevels { get; set; }
+    public DbSet<WishlistItem> WishlistItems { get; set; }
 
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
     {

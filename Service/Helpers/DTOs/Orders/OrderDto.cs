@@ -8,6 +8,7 @@ namespace Service.Helpers.DTOs.Orders
         public string? CouponCode { get; set; }
         public string? LevelName { get; set; }
         public decimal Discount { get; set; }
+        public decimal BalanceUsed { get; set; }
         public bool IsPaid { get; set; }
         public DateTime? PaidAt { get; set; }
         public DateTime CreatedAt { get; set; }

@@ -85,6 +85,22 @@ namespace Repository.Repositories
                             .ExecuteUpdateAsync(s => s.SetProperty(m => m.UsedCount, m => m.UsedCount - 1));
                 }
 
+                // Balansdan ödənən hissə balansa qaytarılır
+                var paidFromBalance = await _dbSet.Where(m => m.Id == id).Select(m => new { m.UserId, m.BalanceUsed }).FirstAsync();
+                if (paidFromBalance.BalanceUsed > 0)
+                {
+                    _dbContext.BalanceTransactions.Add(new BalanceTransaction
+                    {
+                        UserId = paidFromBalance.UserId,
+                        Amount = paidFromBalance.BalanceUsed,
+                        Type = BalanceTransactionType.Refund,
+                        Note = $"Refund for cancelled order #{id}",
+                        OrderId = id,
+                        IsConfirmed = true
+                    });
+                    await _dbContext.SaveChangesAsync();
+                }
+
                 // Ləğv olunan sifarişin məhsulları stoka qayıdır
                 var items = await _dbContext.OrderItems
                         .AsNoTracking()
@@ -240,10 +256,41 @@ namespace Repository.Repositories
 
             order.Total = total - order.Discount;
 
+            // Balansdan ödəniş: balans bu tranzaksiyada kilidlə oxunur ki, eyni pul iki sifarişə xərclənməsin
+            if (plan.UseBalance && order.Total > 0)
+            {
+                var balance = (await _dbContext.BalanceTransactions
+                        .FromSqlInterpolated($"SELECT * FROM BalanceTransactions WITH (UPDLOCK, HOLDLOCK) WHERE UserId = {plan.UserId} AND IsConfirmed = 1")
+                        .Select(m => m.Amount)
+                        .ToListAsync())
+                        .Sum();
+
+                order.BalanceUsed = Math.Min(Math.Max(balance, 0), order.Total);
+                if (order.BalanceUsed == order.Total)
+                {
+                    order.IsPaid = true;
+                    order.PaidAt = DateTime.UtcNow;
+                }
+            }
+
             _dbContext.Orders.Add(order);
             _dbContext.CartItems.RemoveRange(cartItems);
 
             await _dbContext.SaveChangesAsync();
+
+            if (order.BalanceUsed > 0)
+            {
+                _dbContext.BalanceTransactions.Add(new BalanceTransaction
+                {
+                    UserId = plan.UserId,
+                    Amount = -order.BalanceUsed,
+                    Type = BalanceTransactionType.Order,
+                    Note = $"Payment for order #{order.Id}",
+                    OrderId = order.Id,
+                    IsConfirmed = true
+                });
+                await _dbContext.SaveChangesAsync();
+            }
             await transaction.CommitAsync();
 
             return new OrderPlaceResult

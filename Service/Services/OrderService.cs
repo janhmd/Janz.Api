@@ -64,7 +64,7 @@ namespace Service.Services
             }
 
             var couponCode = string.IsNullOrWhiteSpace(model.CouponCode) ? null : model.CouponCode.Trim().ToUpperInvariant();
-            var plan = new OrderPlan(userId, address.FullName, address.Phone, address.Line, address.City, address.PostalCode, couponCode);
+            var plan = new OrderPlan(userId, address.FullName, address.Phone, address.Line, address.City, address.PostalCode, couponCode, model.UseBalance);
 
             // Stok, sifariş və səbət bir tranzaksiyada dəyişir (OrderRepository.PlaceAsync)
             var result = await _orderRepo.PlaceAsync(plan);
@@ -176,6 +176,7 @@ namespace Service.Services
             dto.CouponCode = order.CouponCode;
             dto.LevelName = order.LevelName;
             dto.Discount = order.Discount;
+            dto.BalanceUsed = order.BalanceUsed;
             dto.IsPaid = order.IsPaid;
             dto.PaidAt = order.PaidAt;
             dto.CreatedAt = order.CreatedAt;

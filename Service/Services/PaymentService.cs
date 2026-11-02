@@ -65,7 +65,8 @@ namespace Service.Services
             // Stripe məbləği qəpiklə qəbul edir; geri qayıdış ünvanları MVC saytındadır
             var baseUrl = (_configuration["Frontend:MvcBaseUrl"] ?? "https://localhost:7047").TrimEnd('/');
             var currency = _configuration["Stripe:Currency"] ?? "azn";
-            var amount = ((long)Math.Round(order.Total * 100)).ToString(CultureInfo.InvariantCulture);
+            // Balansdan ödənən hissə çıxılır: kartla yalnız qalan məbləğ ödənir
+            var amount = ((long)Math.Round((order.Total - order.BalanceUsed) * 100)).ToString(CultureInfo.InvariantCulture);
             var id = order.Id.ToString(CultureInfo.InvariantCulture);
 
             var form = new Dictionary<string, string>
@@ -129,7 +130,7 @@ namespace Service.Services
             var root = session.RootElement;
             var paid = root.GetProperty("payment_status").GetString() == "paid"
                 && root.GetProperty("client_reference_id").GetString() == order.Id.ToString(CultureInfo.InvariantCulture)
-                && root.GetProperty("amount_total").GetInt64() == (long)Math.Round(order.Total * 100);
+                && root.GetProperty("amount_total").GetInt64() == (long)Math.Round((order.Total - order.BalanceUsed) * 100);
 
             if (paid)
             {

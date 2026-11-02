@@ -35,5 +35,6 @@ namespace Repository.Results
         string DeliveryLine,
         string DeliveryCity,
         string DeliveryPostalCode,
-        string? CouponCode);
+        string? CouponCode,
+        bool UseBalance);
 }

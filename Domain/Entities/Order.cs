@@ -16,6 +16,9 @@ namespace Domain.Entities
         public string? LevelName { get; set; }              // endirim səviyyədən gəlibsə onun adı
         public decimal Discount { get; set; }
 
+        // Daxili hesabdan ödənən hissə. Kartla və ya çatdırılmada qalan məbləğ (Total - BalanceUsed) ödənir
+        public decimal BalanceUsed { get; set; }
+
         // Kartla ödəniş (Stripe Checkout): sessiya yaranır, müştəri qayıdanda ödənib-ödənmədiyi Stripe-dan yoxlanılır
         public bool IsPaid { get; set; }
         public DateTime? PaidAt { get; set; }

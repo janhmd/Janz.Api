@@ -31,6 +31,7 @@ public class AppDbContext : IdentityDbContext<AppUser>
     public DbSet<SavedArticle> SavedArticles { get; set; }
     public DbSet<ArticleComment> ArticleComments { get; set; }
     public DbSet<ArticleCommentVote> ArticleCommentVotes { get; set; }
+    public DbSet<Notification> Notifications { get; set; }
 
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
     {

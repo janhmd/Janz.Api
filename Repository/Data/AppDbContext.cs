@@ -25,6 +25,12 @@ public class AppDbContext : IdentityDbContext<AppUser>
     public DbSet<WishlistItem> WishlistItems { get; set; }
     public DbSet<BalanceTransaction> BalanceTransactions { get; set; }
     public DbSet<GiftCertificate> GiftCertificates { get; set; }
+    public DbSet<Article> Articles { get; set; }
+    public DbSet<ArticleImage> ArticleImages { get; set; }
+    public DbSet<ArticleLike> ArticleLikes { get; set; }
+    public DbSet<SavedArticle> SavedArticles { get; set; }
+    public DbSet<ArticleComment> ArticleComments { get; set; }
+    public DbSet<ArticleCommentVote> ArticleCommentVotes { get; set; }
 
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
     {

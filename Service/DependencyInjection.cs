@@ -32,6 +32,7 @@ namespace Service
             services.AddScoped<IBalanceService, BalanceService>();
             services.AddScoped<IGiftCertificateService, GiftCertificateService>();
             services.AddScoped<IArticleService, ArticleService>();
+            services.AddScoped<INotificationService, NotificationService>();
             services.AddHttpClient();
             services.AddValidatorsFromAssemblyContaining<RegisterDtoValidator>();
             return services;

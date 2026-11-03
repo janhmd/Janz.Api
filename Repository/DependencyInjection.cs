@@ -12,6 +12,7 @@ namespace Repository
             services.AddScoped<ICartItemRepository, CartItemRepository>();
             services.AddScoped<IOrderRepository, OrderRepository>();
             services.AddScoped<IBalanceRepository, BalanceRepository>();
+            services.AddScoped<INotificationRepository, NotificationRepository>();
             services.AddScoped(typeof(IBaseRepository<>), typeof(BaseRepository<>));
             return services;
         }

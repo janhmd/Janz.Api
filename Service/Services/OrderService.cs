@@ -18,16 +18,19 @@ namespace Service.Services
         private readonly IAddressRepository _addressRepo;
         private readonly IValidator<CreateOrderDto> _createValidator;
         private readonly IValidator<UpdateOrderStatusDto> _statusValidator;
+        private readonly INotificationService _notificationService;
 
         public OrderService(IOrderRepository orderRepo,
                             IAddressRepository addressRepo,
                             IValidator<CreateOrderDto> createValidator,
-                            IValidator<UpdateOrderStatusDto> statusValidator)
+                            IValidator<UpdateOrderStatusDto> statusValidator,
+                            INotificationService notificationService)
         {
             _orderRepo = orderRepo;
             _addressRepo = addressRepo;
             _createValidator = createValidator;
             _statusValidator = statusValidator;
+            _notificationService = notificationService;
         }
 
         public async Task<IEnumerable<OrderDto>> GetAllAsync(string userId)
@@ -68,6 +71,12 @@ namespace Service.Services
 
             // Stok, sifariş və səbət bir tranzaksiyada dəyişir (OrderRepository.PlaceAsync)
             var result = await _orderRepo.PlaceAsync(plan);
+
+            if (result.Outcome == OrderOutcome.Success)
+            {
+                await _notificationService.AddAsync(userId, NotificationKind.Shop, $"Order #{result.Order!.Id} was placed",
+                    $"We received your order for ₼{result.Order.Total:0.00}.", $"/Orders/Detail/{result.Order.Id}");
+            }
 
             return result.Outcome switch
             {
@@ -146,6 +155,21 @@ namespace Service.Services
             {
                 throw new BadRequestException("The order status was changed by someone else. Refresh the page.");
             }
+
+            await _notificationService.AddAsync(order.UserId, NotificationKind.Shop, $"Order #{order.Id} is now {to}",
+                StatusText(to), $"/Orders/Detail/{order.Id}");
+        }
+
+        private static string StatusText(OrderStatus status)
+        {
+            return status switch
+            {
+                OrderStatus.Processing => "We are preparing your order.",
+                OrderStatus.Shipped => "Your order is on the way.",
+                OrderStatus.Delivered => "Your order was delivered. Enjoy!",
+                OrderStatus.Cancelled => "Your order was cancelled. Money paid from the balance is returned to it.",
+                _ => "The order status was updated."
+            };
         }
 
         // Dashboard-dakı "son sifarişlər" də eyni formada göstərilir

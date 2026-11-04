@@ -38,6 +38,7 @@ namespace Service
             services.AddScoped<IPostCommentService, PostCommentService>();
             services.AddScoped<ICommunityProfileService, CommunityProfileService>();
             services.AddScoped<ICommunityAdminService, CommunityAdminService>();
+            services.AddScoped<IAssistantService, AssistantService>();
             services.AddHttpClient();
             services.AddValidatorsFromAssemblyContaining<RegisterDtoValidator>();
             return services;

@@ -32,6 +32,15 @@ public class AppDbContext : IdentityDbContext<AppUser>
     public DbSet<ArticleComment> ArticleComments { get; set; }
     public DbSet<ArticleCommentVote> ArticleCommentVotes { get; set; }
     public DbSet<Notification> Notifications { get; set; }
+    public DbSet<Post> Posts { get; set; }
+    public DbSet<PostImage> PostImages { get; set; }
+    public DbSet<PostVote> PostVotes { get; set; }
+    public DbSet<SavedPost> SavedPosts { get; set; }
+    public DbSet<PostComment> PostComments { get; set; }
+    public DbSet<PostCommentVote> PostCommentVotes { get; set; }
+    public DbSet<UserFollow> UserFollows { get; set; }
+    public DbSet<UserBlock> UserBlocks { get; set; }
+    public DbSet<PostReport> PostReports { get; set; }
 
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
     {

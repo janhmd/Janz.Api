@@ -10,6 +10,8 @@ namespace Domain.Configurations
         {
             builder.Property(m => m.Nickname).HasMaxLength(30);
             builder.Property(m => m.AvatarPath).HasMaxLength(300);
+            builder.Property(m => m.Bio).HasMaxLength(180);
+            builder.Property(m => m.CookMethods).HasMaxLength(500);
             builder.Property(m => m.OrganizationName).HasMaxLength(200);
             builder.Property(m => m.OrganizationAddress).HasMaxLength(300);
             builder.Property(m => m.Voen).HasMaxLength(20);

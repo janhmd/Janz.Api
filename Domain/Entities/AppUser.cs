@@ -12,6 +12,10 @@ public class AppUser : IdentityUser
     public string? Nickname { get; set; }
     public string? AvatarPath { get; set; }
 
+    // Community profilində: qısa məlumat və "How I cook" (vergüllə ayrılmış hazırlama üsulları)
+    public string? Bio { get; set; }
+    public string? CookMethods { get; set; }
+
     // Hüquqi şəxs kimi alan müştəri üçün (fakturada istifadə olunur)
     public string? OrganizationName { get; set; }
     public string? OrganizationAddress { get; set; }

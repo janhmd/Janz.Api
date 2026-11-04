@@ -33,6 +33,11 @@ namespace Service
             services.AddScoped<IGiftCertificateService, GiftCertificateService>();
             services.AddScoped<IArticleService, ArticleService>();
             services.AddScoped<INotificationService, NotificationService>();
+            services.AddScoped<ICommunityAuthorService, CommunityAuthorService>();
+            services.AddScoped<IPostService, PostService>();
+            services.AddScoped<IPostCommentService, PostCommentService>();
+            services.AddScoped<ICommunityProfileService, CommunityProfileService>();
+            services.AddScoped<ICommunityAdminService, CommunityAdminService>();
             services.AddHttpClient();
             services.AddValidatorsFromAssemblyContaining<RegisterDtoValidator>();
             return services;

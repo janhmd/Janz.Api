@@ -132,6 +132,7 @@ using (var scope = app.Services.CreateScope())
 
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
     await RoleSeeder.SeedAsync(roleManager);
+    await SiteSeeder.SeedAsync(db);
 
     // İşçi hesabları (appsettings -> SeedAdmins): ilk SuperAdmin buradan yaranır
     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();

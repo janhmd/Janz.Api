@@ -41,6 +41,8 @@ public class AppDbContext : IdentityDbContext<AppUser>
     public DbSet<UserFollow> UserFollows { get; set; }
     public DbSet<UserBlock> UserBlocks { get; set; }
     public DbSet<PostReport> PostReports { get; set; }
+    public DbSet<SitePage> SitePages { get; set; }
+    public DbSet<SiteSetting> SiteSettings { get; set; }
 
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
     {

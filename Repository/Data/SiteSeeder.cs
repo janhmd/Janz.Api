@@ -16,6 +16,7 @@ public static class SiteSeeder
                     Slug = "delivery",
                     Title = "Delivery and payment",
                     InTerms = true,
+                    InFooter = true,
                     Body = "## Delivery\nThe Janz courier delivers all over Baku in 2–3 days, free of charge. Other regions get their orders by Azerpost.\n\n## Payment\nPay by card on the site right after placing the order, from your Janz balance, or give cash or card to the courier.\n\n## Pickup\nNesimi, Masud Davudoglu 171, every day 10:00–20:00."
                 },
                 new SitePage
@@ -23,6 +24,7 @@ public static class SiteSeeder
                     Slug = "discounts",
                     Title = "Discount system",
                     InTerms = true,
+                    InFooter = true,
                     Body = "## Levels\nThe more you order, the higher your discount level. The level and its discount are shown in your account.\n\n## Promo codes\nType a promo code in the cart and press Apply, the discount shows up in the total. New customers get a code for the first order in their account.\n\n## Gift certificates\nA gift certificate adds its amount to your Janz balance."
                 },
                 new SitePage
@@ -30,6 +32,7 @@ public static class SiteSeeder
                     Slug = "refunds",
                     Title = "Refunds",
                     InTerms = true,
+                    InFooter = true,
                     Body = "## When you can return\nIf an order is broken, wrong or not as described, write to us and we will sort it out.\n\n## How\nWrite to us on WhatsApp with your order number and a photo. The money goes back to your Janz balance or to your card."
                 },
                 new SitePage
@@ -37,6 +40,7 @@ public static class SiteSeeder
                     Slug = "faq",
                     Title = "FAQ",
                     InTerms = true,
+                    InFooter = true,
                     Body = "## How do I choose a coffee?\nOpen the catalog and filter by brewing method and taste, or ask the Janz assistant.\n\n## Where is my order?\nOpen your account and go to Orders: every order shows its status there.\n\n## Can I grind the beans?\nYes, choose the grind on the product page."
                 },
                 new SitePage

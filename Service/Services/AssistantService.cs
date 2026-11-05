@@ -75,7 +75,13 @@ namespace Service.Services
                 }
 
                 using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-                var text = json.RootElement.GetProperty("candidates")[0].GetProperty("content").GetProperty("parts")[0].GetProperty("text").GetString();
+                if (!json.RootElement.TryGetProperty("candidates", out var candidates) || candidates.ValueKind != JsonValueKind.Array || candidates.GetArrayLength() == 0)
+                {
+                    return new AssistantAnswerDto();
+                }
+
+                var parts = candidates[0].GetProperty("content").GetProperty("parts");
+                var text = parts.GetArrayLength() == 0 ? null : parts[0].GetProperty("text").GetString();
 
                 return new AssistantAnswerDto { Answer = text?.Trim() ?? string.Empty };
             }

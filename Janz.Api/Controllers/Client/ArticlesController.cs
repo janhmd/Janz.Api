@@ -28,9 +28,9 @@ namespace Janz.Api.Controllers.Client
         }
 
         [HttpGet("{slug}")]
-        public async Task<IActionResult> GetBySlug([FromRoute] string slug)
+        public async Task<IActionResult> GetBySlug([FromRoute] string slug, [FromQuery] bool view = false)
         {
-            return Ok(await _articleService.GetBySlugAsync(slug, UserId));
+            return Ok(await _articleService.GetBySlugAsync(slug, UserId, view));
         }
 
         [HttpGet("saved")]

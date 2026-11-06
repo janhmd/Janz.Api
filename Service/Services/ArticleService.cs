@@ -77,7 +77,7 @@ namespace Service.Services
             };
         }
 
-        public async Task<ArticleDto> GetBySlugAsync(string slug, string? userId)
+        public async Task<ArticleDto> GetBySlugAsync(string slug, string? userId, bool countView = false)
         {
             var found = (await _articleRepo.GetAllAsync()).FirstOrDefault(m => m.Slug == slug && m.IsPublished);
             if (found is null)
@@ -85,10 +85,13 @@ namespace Service.Services
                 throw new NotFoundException();
             }
 
-            // Hər açılış bir baxış sayılır
+            // Baxış yalnız MVC tərəfi (hər oxucu üçün bir dəfə) istəyəndə sayılır; yeniləmə və botlar sayı şişirtmir
             var article = (await _articleRepo.GetByIdAsync(found.Id))!;
-            article.Views += 1;
-            await _articleRepo.UpdateAsync(article);
+            if (countView)
+            {
+                article.Views += 1;
+                await _articleRepo.UpdateAsync(article);
+            }
 
             var dto = new ArticleDto();
             var card = (await ToCardsAsync(new List<Article> { article }, userId)).First();

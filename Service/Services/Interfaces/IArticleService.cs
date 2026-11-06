@@ -6,7 +6,7 @@ namespace Service.Services.Interfaces
     {
         // Sayt: yalnız dərc olunmuşlar. sort: new (default), old, read, popular
         Task<IEnumerable<ArticleCardDto>> GetPublishedAsync(string? topic, string? tag, string? sort, string? userId);
-        Task<ArticleDto> GetBySlugAsync(string slug, string? userId);
+        Task<ArticleDto> GetBySlugAsync(string slug, string? userId, bool countView = false);
 
         Task<int> LikeAsync(int id, string userId, bool like);
         Task SaveAsync(int id, string userId, bool save);

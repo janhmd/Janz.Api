@@ -8,6 +8,9 @@ namespace Service.Helpers
     // Açar boşdursa və ya Gemini cavab vermirsə boş mətn qayıdır, çağıran öz hazır cavabına keçir
     public static class Gemini
     {
+        // "-latest" həmişə Google-un cari Flash modelinə yönləndirir (köhnə model adları bağlananda köməkçi dayanmasın)
+        private const string DefaultModel = "gemini-flash-latest";
+
         public static async Task<string> AskAsync(IHttpClientFactory httpClientFactory, IConfiguration configuration, string instruction, string question)
         {
             var key = configuration["Gemini:ApiKey"];
@@ -16,7 +19,7 @@ namespace Service.Helpers
                 return string.Empty;
             }
 
-            var geminiModel = configuration["Gemini:Model"] ?? "gemini-2.0-flash";
+            var geminiModel = configuration["Gemini:Model"] ?? DefaultModel;
             var request = new
             {
                 system_instruction = new { parts = new[] { new { text = instruction } } },
@@ -35,6 +38,8 @@ namespace Service.Helpers
                 using var response = await client.SendAsync(message);
                 if (!response.IsSuccessStatusCode)
                 {
+                    var failure = await response.Content.ReadAsStringAsync();
+                    Console.Error.WriteLine($"Gemini request failed: {(int)response.StatusCode} {geminiModel} {failure[..Math.Min(failure.Length, 300)]}");
                     return string.Empty;
                 }
 
@@ -51,6 +56,7 @@ namespace Service.Helpers
             }
             catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException or KeyNotFoundException or InvalidOperationException)
             {
+                Console.Error.WriteLine($"Gemini request error: {ex.GetType().Name} {ex.Message}");
                 return string.Empty;
             }
         }

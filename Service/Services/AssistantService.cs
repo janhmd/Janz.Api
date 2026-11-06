@@ -1,8 +1,7 @@
-using System.Net.Http.Json;
-using System.Text.Json;
 using Domain.Entities;
 using Microsoft.Extensions.Configuration;
 using Repository.Repositories.Interfaces;
+using Service.Helpers;
 using Service.Helpers.DTOs.Assistant;
 using Service.Helpers.Exceptions;
 using Service.Services.Interfaces;
@@ -40,55 +39,15 @@ namespace Service.Services
                 throw new BadRequestException("Write a question up to 300 characters.");
             }
 
-            var key = _configuration["Gemini:ApiKey"];
-            if (string.IsNullOrWhiteSpace(key))
-            {
-                return new AssistantAnswerDto();
-            }
-
             var products = (await _productRepo.GetAllAsync())
                 .Where(p => p.IsVisible)
                 .Take(60)
                 .Select(p => $"{p.Name} ({p.Price} AZN)");
             var instruction = Instruction + "\nProducts: " + string.Join("; ", products);
 
-            var geminiModel = _configuration["Gemini:Model"] ?? "gemini-2.0-flash";
-            var request = new
-            {
-                system_instruction = new { parts = new[] { new { text = instruction } } },
-                contents = new[] { new { role = "user", parts = new[] { new { text = question } } } },
-                generationConfig = new { maxOutputTokens = 300, temperature = 0.4 }
-            };
+            var answer = await Gemini.AskAsync(_httpClientFactory, _configuration, instruction, question);
 
-            try
-            {
-                var client = _httpClientFactory.CreateClient();
-                client.Timeout = TimeSpan.FromSeconds(15);
-                using var message = new HttpRequestMessage(HttpMethod.Post, $"https://generativelanguage.googleapis.com/v1beta/models/{geminiModel}:generateContent");
-                message.Headers.Add("x-goog-api-key", key);
-                message.Content = JsonContent.Create(request);
-
-                using var response = await client.SendAsync(message);
-                if (!response.IsSuccessStatusCode)
-                {
-                    return new AssistantAnswerDto();
-                }
-
-                using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-                if (!json.RootElement.TryGetProperty("candidates", out var candidates) || candidates.ValueKind != JsonValueKind.Array || candidates.GetArrayLength() == 0)
-                {
-                    return new AssistantAnswerDto();
-                }
-
-                var parts = candidates[0].GetProperty("content").GetProperty("parts");
-                var text = parts.GetArrayLength() == 0 ? null : parts[0].GetProperty("text").GetString();
-
-                return new AssistantAnswerDto { Answer = text?.Trim() ?? string.Empty };
-            }
-            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException or KeyNotFoundException or InvalidOperationException)
-            {
-                return new AssistantAnswerDto();
-            }
+            return new AssistantAnswerDto { Answer = answer };
         }
     }
 }

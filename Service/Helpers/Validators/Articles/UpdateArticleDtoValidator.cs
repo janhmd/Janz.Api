@@ -29,6 +29,10 @@ namespace Service.Helpers.Validators.Articles
             RuleForEach(m => m.Tags)
                 .Must(value => ArticleRules.Tags.Contains(value)).WithMessage("Choose tags from the list.");
 
+            RuleFor(m => m.PublishedAt)
+                .Must(value => value!.Value.ToUniversalTime() <= DateTime.UtcNow.AddDays(1)).WithMessage("The published date can't be in the future.")
+                .When(m => m.PublishedAt.HasValue);
+
             RuleFor(m => m.AuthorName).MaximumLength(100).WithMessage("The author name can be at most 100 characters.");
             RuleFor(m => m.AuthorRole).MaximumLength(100).WithMessage("The author role can be at most 100 characters.");
             RuleFor(m => m.Series).MaximumLength(100).WithMessage("The series can be at most 100 characters.");

@@ -17,6 +17,9 @@ namespace Service.Helpers.DTOs.Articles
         public string? Series { get; set; }
         public bool IsPublished { get; set; }
 
+        // Dərc tarixi: boşdursa dərc olunduğu an yazılır
+        public DateTime? PublishedAt { get; set; }
+
         // Üz qabığı (məcburi)
         public IFormFile? Cover { get; set; }
 

@@ -290,7 +290,7 @@ namespace Service.Services
                     IsLearning = model.IsLearning,
                     Series = Clean(model.Series),
                     IsPublished = model.IsPublished,
-                    PublishedAt = model.IsPublished ? DateTime.UtcNow : null
+                    PublishedAt = model.IsPublished ? (model.PublishedAt?.ToUniversalTime() ?? DateTime.UtcNow) : null
                 };
                 await _articleRepo.AddAsync(article);
 
@@ -330,8 +330,12 @@ namespace Service.Services
                 article.CoverPath = await _fileService.UploadImageAsync(model.Cover, ArticleRules.ImageFolder);
             }
 
-            // İlk dəfə dərc olunanda tarix yazılır, sonra dəyişmir
-            if (model.IsPublished && article.PublishedAt is null)
+            // İlk dəfə dərc olunanda tarix yazılır; admin tarix seçibsə o qalır
+            if (model.IsPublished && model.PublishedAt.HasValue)
+            {
+                article.PublishedAt = model.PublishedAt.Value.ToUniversalTime();
+            }
+            else if (model.IsPublished && article.PublishedAt is null)
             {
                 article.PublishedAt = DateTime.UtcNow;
             }

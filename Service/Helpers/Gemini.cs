@@ -24,13 +24,13 @@ namespace Service.Helpers
             {
                 system_instruction = new { parts = new[] { new { text = instruction } } },
                 contents = new[] { new { role = "user", parts = new[] { new { text = question } } } },
-                generationConfig = new { maxOutputTokens = 300, temperature = 0.4 }
+                generationConfig = new { maxOutputTokens = 1024, temperature = 0.4 }
             };
 
             try
             {
                 var client = httpClientFactory.CreateClient();
-                client.Timeout = TimeSpan.FromSeconds(15);
+                client.Timeout = TimeSpan.FromSeconds(30);
                 using var message = new HttpRequestMessage(HttpMethod.Post, $"https://generativelanguage.googleapis.com/v1beta/models/{geminiModel}:generateContent");
                 message.Headers.Add("x-goog-api-key", key);
                 message.Content = JsonContent.Create(request);

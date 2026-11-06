@@ -40,6 +40,9 @@ namespace Service.Services
             _configuration = configuration;
         }
 
+        private const string CodeProvider = "Janz";
+        private const string CodeName = "EmailCode";
+
         public async Task<ServiceResult<string>> RegisterAsync(RegisterDto model)
         {
             var validation = await _registerValidator.ValidateAsync(model);
@@ -48,9 +51,16 @@ namespace Service.Services
                 return ServiceResult<string>.Fail(validation.Errors.Select(e => e.ErrorMessage).ToArray());
             }
 
-            if (await _userManager.FindByEmailAsync(model.Email.Trim()) is not null)
+            // Kodu yazıb təsdiqləməyən qeydiyyat tamamlanmış sayılmır: eyni email yenidən qeydiyyatdan keçə bilər
+            var existing = await _userManager.FindByEmailAsync(model.Email.Trim());
+            if (existing is not null)
             {
-                return ServiceResult<string>.Fail("This email is already registered.");
+                if (existing.EmailConfirmed)
+                {
+                    return ServiceResult<string>.Fail("This email is already registered.");
+                }
+
+                await _userManager.DeleteAsync(existing);
             }
 
             var user = ToEntity(model);
@@ -65,23 +75,41 @@ namespace Service.Services
             return ServiceResult<string>.Ok(user.Email!);
         }
 
-        // Linkdəki token düzdürsə email təsdiqlənir və istifadəçi dərhal daxil olur
+        // Emailə gedən 4 rəqəmli kod düzdürsə email təsdiqlənir (qeydiyyat tamamlanır) və istifadəçi dərhal daxil olur
         public async Task<ServiceResult<AuthResponseDto>> ConfirmEmailAsync(ConfirmEmailDto model)
         {
-            var user = string.IsNullOrWhiteSpace(model.UserId) ? null : await _userManager.FindByIdAsync(model.UserId);
-            var token = Decode(model.Token);
-            if (user is null || token is null)
+            var user = await FindByEmailAsync(model.Email);
+            if (user is null)
             {
-                return ServiceResult<AuthResponseDto>.Fail("The confirmation link is not valid.");
+                return ServiceResult<AuthResponseDto>.Fail("The code is not valid. Request a new one.");
             }
 
             if (!user.EmailConfirmed)
             {
-                var result = await _userManager.ConfirmEmailAsync(user, token);
-                if (!result.Succeeded)
+                var stored = await _userManager.GetAuthenticationTokenAsync(user, CodeProvider, CodeName);
+                var (result, updated) = EmailCode.Check(stored, user.Id, model.Code, DateTime.UtcNow);
+                if (result == EmailCodeResult.Wrong)
                 {
-                    return ServiceResult<AuthResponseDto>.Fail("The confirmation link is not valid or has expired. Request a new one.");
+                    await _userManager.SetAuthenticationTokenAsync(user, CodeProvider, CodeName, updated);
+                    return ServiceResult<AuthResponseDto>.Fail("The code is wrong. Check it and try again.");
                 }
+
+                if (result != EmailCodeResult.Valid)
+                {
+                    await _userManager.RemoveAuthenticationTokenAsync(user, CodeProvider, CodeName);
+                    return ServiceResult<AuthResponseDto>.Fail(result == EmailCodeResult.Locked
+                        ? "Too many wrong codes. Request a new one."
+                        : "The code has expired. Request a new one.");
+                }
+
+                var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+                var confirmed = await _userManager.ConfirmEmailAsync(user, token);
+                if (!confirmed.Succeeded)
+                {
+                    return ServiceResult<AuthResponseDto>.Fail("The code is not valid. Request a new one.");
+                }
+
+                await _userManager.RemoveAuthenticationTokenAsync(user, CodeProvider, CodeName);
             }
 
             if (await _userManager.IsLockedOutAsync(user))
@@ -149,13 +177,9 @@ namespace Service.Services
 
         private async Task SendConfirmationAsync(AppUser user)
         {
-            var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-            var link = MvcLink("Account/ConfirmEmail", user.Id, token);
-            await _emailService.SendAsync(user.Email!, "Confirm your Janz account", Letter(
-                user.Name,
-                "Thanks for signing up. Confirm your email to start shopping.",
-                "Confirm my email",
-                link));
+            var code = EmailCode.NewCode();
+            await _userManager.SetAuthenticationTokenAsync(user, CodeProvider, CodeName, EmailCode.Pack(user.Id, code, DateTime.UtcNow));
+            await _emailService.SendAsync(user.Email!, "Your Janz code", CodeLetter(user.Name, code));
         }
 
         private async Task<AppUser?> FindByEmailAsync(string? email)
@@ -182,6 +206,18 @@ namespace Service.Services
             {
                 return null;
             }
+        }
+
+        private static string CodeLetter(string? name, string code)
+        {
+            var hello = string.IsNullOrWhiteSpace(name) ? "Hello," : $"Hello, {WebUtility.HtmlEncode(name)}!";
+            return $@"<div style=""font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:24px;color:#111"">
+<h2 style=""margin:0 0 16px"">Janz</h2>
+<p>{hello}</p>
+<p>Thanks for signing up. Enter this code on the site to finish the registration:</p>
+<p style=""margin:24px 0;font-size:32px;font-weight:bold;letter-spacing:8px"">{code}</p>
+<p style=""color:#666;font-size:12px"">The code works for 10 minutes. If you did not sign up, just ignore this email.</p>
+</div>";
         }
 
         private static string Letter(string? name, string text, string button, string link)
@@ -212,7 +248,7 @@ namespace Service.Services
 
             if (!user.EmailConfirmed)
             {
-                return ServiceResult<AuthResponseDto>.Fail("Confirm your email first. We sent you a link when you signed up.");
+                return ServiceResult<AuthResponseDto>.Fail("Confirm your email first. We sent you a code when you signed up.");
             }
 
             // Admin paneldən bloklanmış hesab daxil ola bilmir

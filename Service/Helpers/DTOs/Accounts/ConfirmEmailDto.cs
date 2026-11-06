@@ -1,9 +1,9 @@
 namespace Service.Helpers.DTOs.Accounts
 {
-    // Emaildəki linkdən gələn istifadəçi və token (token base64url ilə kodlanıb)
+    // Qeydiyyatda emailə gedən 4 rəqəmli kodu təsdiqləmək üçün
     public class ConfirmEmailDto
     {
-        public string? UserId { get; set; }
-        public string? Token { get; set; }
+        public string? Email { get; set; }
+        public string? Code { get; set; }
     }
 }

@@ -16,7 +16,7 @@ namespace Janz.Api.Controllers.Client
             _accountService = accountService;
         }
 
-        // Uğurlu qeydiyyatda token qaytarılmır: emailə təsdiq linki gedir
+        // Uğurlu qeydiyyatda token qaytarılmır: emailə 4 rəqəmli kod gedir
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterDto model)
         {

@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Service.Helpers.Exceptions;
 using Service.Services.Interfaces;
 using System.Net;
 using System.Net.Mail;
@@ -47,7 +48,19 @@ namespace Service.Services
                 Credentials = new NetworkCredential(user, password)
             };
 
-            await client.SendMailAsync(message);
+            try
+            {
+                await client.SendMailAsync(message);
+            }
+            catch (Exception ex) when (ex is SmtpException or InvalidOperationException or System.IO.IOException)
+            {
+                // Səbəb loga yazılır; lokal işləyəndə cavabda da göstərilir ki, düzəltmək asan olsun (parol heç vaxt yazılmır)
+                _logger.LogError(ex, "Could not send the email to {To} through {Host}", to, host);
+                var local = string.Equals(Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"), "Development", StringComparison.OrdinalIgnoreCase);
+                throw new BadRequestException(local
+                    ? $"The email could not be sent ({ex.GetType().Name}: {ex.Message})"
+                    : "We could not send the email right now. Please try again later.");
+            }
         }
     }
 }

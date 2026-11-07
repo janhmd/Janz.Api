@@ -58,9 +58,21 @@ namespace Service.Services
                 _logger.LogError(ex, "Could not send the email to {To} through {Host}", to, host);
                 var local = string.Equals(Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"), "Development", StringComparison.OrdinalIgnoreCase);
                 throw new BadRequestException(local
-                    ? $"The email could not be sent ({ex.GetType().Name}: {ex.Message})"
+                    ? $"The email could not be sent ({Describe(ex)})"
                     : "We could not send the email right now. Please try again later.");
             }
+        }
+
+        // Xarici SmtpException çox vaxt yalnız "Failure sending mail." deyir, əsl səbəb içdəki xətalardadır
+        private static string Describe(Exception ex)
+        {
+            var parts = new List<string>();
+            for (var current = ex; current is not null; current = current.InnerException)
+            {
+                parts.Add($"{current.GetType().Name}: {current.Message}");
+            }
+
+            return string.Join(" -> ", parts);
         }
     }
 }

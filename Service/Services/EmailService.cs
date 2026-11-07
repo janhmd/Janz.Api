@@ -2,8 +2,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Service.Helpers.Exceptions;
 using Service.Services.Interfaces;
-using System.Net;
-using System.Net.Mail;
+using MailKit.Net.Smtp;
+using MailKit.Security;
+using MimeKit;
 
 namespace Service.Services
 {
@@ -33,26 +34,23 @@ namespace Service.Services
                 return;
             }
 
-            using var message = new MailMessage
-            {
-                From = new MailAddress(settings["From"] ?? user, settings["FromName"] ?? "Janz"),
-                Subject = subject,
-                Body = html,
-                IsBodyHtml = true
-            };
-            message.To.Add(to);
-
-            using var client = new SmtpClient(host, int.TryParse(settings["Port"], out var port) ? port : 587)
-            {
-                EnableSsl = true,
-                Credentials = new NetworkCredential(user, password)
-            };
+            var message = new MimeMessage();
+            message.From.Add(new MailboxAddress(settings["FromName"] ?? "Janz", settings["From"] ?? user));
+            message.To.Add(MailboxAddress.Parse(to));
+            message.Subject = subject;
+            message.Body = new TextPart("html") { Text = html };
 
             try
             {
-                await client.SendMailAsync(message);
+                // MailKit: 465 portunda dərhal SSL, qalanında (587) STARTTLS
+                var port = int.TryParse(settings["Port"], out var parsed) ? parsed : 587;
+                using var client = new SmtpClient();
+                await client.ConnectAsync(host, port, port == 465 ? SecureSocketOptions.SslOnConnect : SecureSocketOptions.StartTls);
+                await client.AuthenticateAsync(user, password);
+                await client.SendAsync(message);
+                await client.DisconnectAsync(true);
             }
-            catch (Exception ex) when (ex is SmtpException or InvalidOperationException or System.IO.IOException)
+            catch (Exception ex)
             {
                 // Səbəb loga yazılır; lokal işləyəndə cavabda da göstərilir ki, düzəltmək asan olsun (parol heç vaxt yazılmır)
                 _logger.LogError(ex, "Could not send the email to {To} through {Host}", to, host);

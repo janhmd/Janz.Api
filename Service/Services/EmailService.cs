@@ -55,9 +55,14 @@ namespace Service.Services
                 // Səbəb loga yazılır; lokal işləyəndə cavabda da göstərilir ki, düzəltmək asan olsun (parol heç vaxt yazılmır)
                 _logger.LogError(ex, "Could not send the email to {To} through {Host}", to, host);
                 var local = string.Equals(Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"), "Development", StringComparison.OrdinalIgnoreCase);
-                throw new BadRequestException(local
-                    ? $"The email could not be sent ({Describe(ex)})"
-                    : "We could not send the email right now. Please try again later.");
+                if (local)
+                {
+                    // Lokal işləyəndə SMTP səhvi qeydiyyatı dayandırmasın: məktubun məzmunu (kod/link) loga yazılır
+                    _logger.LogWarning("Email was not sent ({Reason}). Message to {To}: {Subject}\n{Html}", Describe(ex), to, subject, html);
+                    return;
+                }
+
+                throw new BadRequestException("We could not send the email right now. Please try again later.");
             }
         }
 

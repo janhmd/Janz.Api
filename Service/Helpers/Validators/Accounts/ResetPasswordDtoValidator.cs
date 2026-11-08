@@ -10,6 +10,8 @@ namespace Service.Helpers.Validators.Accounts
             RuleFor(m => m.UserId).NotEmpty().WithMessage("The link is not valid.");
             RuleFor(m => m.Token).NotEmpty().WithMessage("The link is not valid.");
 
+            RuleFor(m => m.Email).NotEmpty().WithMessage("Enter your email.");
+
             RuleFor(m => m.Password)
                 .NotEmpty().WithMessage("Password is required.")
                 .MinimumLength(6).WithMessage("Password must be at least 6 characters.");

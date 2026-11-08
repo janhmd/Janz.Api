@@ -159,6 +159,11 @@ namespace Service.Services
                 return ServiceResult<string>.Fail("The link is not valid.");
             }
 
+            if (!string.Equals(user.Email, model.Email!.Trim(), StringComparison.OrdinalIgnoreCase))
+            {
+                return ServiceResult<string>.Fail("The email does not match this link.");
+            }
+
             var result = await _userManager.ResetPasswordAsync(user, token, model.Password!);
             if (!result.Succeeded)
             {

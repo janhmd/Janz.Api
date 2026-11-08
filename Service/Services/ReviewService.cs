@@ -43,16 +43,36 @@ namespace Service.Services
             _levelRepo = levelRepo;
         }
 
-        public async Task<ShopReviewsDto> GetShopReviewsAsync(int skip, int take)
+        public async Task<ShopReviewsDto> GetShopReviewsAsync(int skip, int take, IReadOnlyCollection<int>? shopStars = null, IReadOnlyCollection<int>? deliveryStars = null, string? search = null)
         {
             var visible = (await _shopReviewRepo.GetAllAsync()).Where(m => !m.IsHidden).OrderByDescending(m => m.CreatedAt).ToList();
-            var page = visible.Skip(Math.Max(0, skip)).Take(Math.Clamp(take, 1, 50)).ToList();
+
+            // Ortalar və ulduz sayları həmişə bütün görünən rəylərdən hesablanır, filtr yalnız siyahını daraldır
+            var matching = visible.AsEnumerable();
+            if (shopStars is { Count: > 0 }) matching = matching.Where(m => shopStars.Contains(m.ShopRating));
+            if (deliveryStars is { Count: > 0 }) matching = matching.Where(m => deliveryStars.Contains(m.DeliveryRating));
+
+            var term = search?.Trim();
+            Dictionary<string, string>? searchNames = null;
+            if (!string.IsNullOrEmpty(term))
+            {
+                searchNames = await AuthorNamesAsync(matching.Select(m => m.UserId));
+                matching = matching.Where(m =>
+                    (searchNames.TryGetValue(m.UserId, out var author) && author.Contains(term, StringComparison.OrdinalIgnoreCase))
+                    || (m.ShopText?.Contains(term, StringComparison.OrdinalIgnoreCase) ?? false)
+                    || (m.DeliveryText?.Contains(term, StringComparison.OrdinalIgnoreCase) ?? false)
+                    || (m.Comment?.Contains(term, StringComparison.OrdinalIgnoreCase) ?? false));
+            }
+
+            var filtered = matching.ToList();
+            var page = filtered.Skip(Math.Max(0, skip)).Take(Math.Clamp(take, 1, 50)).ToList();
             var names = await AuthorNamesAsync(page.Select(m => m.UserId));
             var levels = await AuthorLevelsAsync(page.Select(m => m.UserId));
 
             return new ShopReviewsDto
             {
                 Total = visible.Count,
+                Matching = filtered.Count,
                 ShopAverage = visible.Count == 0 ? null : Math.Round((decimal)visible.Average(m => m.ShopRating), 1),
                 DeliveryAverage = visible.Count == 0 ? null : Math.Round((decimal)visible.Average(m => m.DeliveryRating), 1),
                 ShopCounts = Enumerable.Range(1, 5).Reverse().Select(star => visible.Count(m => m.ShopRating == star)).ToList(),

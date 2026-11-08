@@ -3,7 +3,8 @@ namespace Service.Helpers.DTOs.Reviews
     // Reviews səhifəsi və ana səhifə: ortalar, ulduzlar üzrə paylanma və rəylər
     public class ShopReviewsDto
     {
-        public int Total { get; set; }
+        public int Total { get; set; }                                       // bütün görünən rəylər
+        public int Matching { get; set; }                                    // filtrə uyğun rəylər
         public decimal? ShopAverage { get; set; }
         public decimal? DeliveryAverage { get; set; }
         public List<int> ShopCounts { get; set; } = new List<int>();         // [5 ulduz, 4, 3, 2, 1]

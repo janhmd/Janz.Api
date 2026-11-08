@@ -10,7 +10,8 @@ namespace Service.Services.Interfaces
         Task DeleteForProductAsync(int productId, string userId);
 
         // Mağaza rəyləri: take = neçə rəy (ana səhifə üçün az, Reviews səhifəsi üçün çox)
-        Task<ShopReviewsDto> GetShopReviewsAsync(int skip, int take);
+        // shopStars / deliveryStars: yalnız bu ulduzlu rəylər, search: ad, mağaza, çatdırılma və şərh mətnində axtarış
+        Task<ShopReviewsDto> GetShopReviewsAsync(int skip, int take, IReadOnlyCollection<int>? shopStars = null, IReadOnlyCollection<int>? deliveryStars = null, string? search = null);
         Task<OrderReviewDto> GetForOrderAsync(int orderId, string userId);
         Task<ShopReviewDto> SaveForOrderAsync(int orderId, string userId, SaveShopReviewDto model);
 

@@ -47,7 +47,7 @@ namespace Janz.Tests.Services
             var (result, updated) = EmailCode.Check(stored, "u1", "1111", Now);
 
             Assert.Equal(EmailCodeResult.Wrong, result);
-            Assert.True(updated.EndsWith("|1"));
+            Assert.EndsWith("|1", updated);
         }
 
         [Fact]

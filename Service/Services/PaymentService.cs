@@ -5,6 +5,7 @@ using Domain.Entities;
 using Domain.Enums;
 using FluentValidation;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Repository.Repositories.Interfaces;
 using Service.Helpers.DTOs.Balance;
 using Service.Helpers.DTOs.Payments;
@@ -24,13 +25,16 @@ namespace Service.Services
         private readonly IValidator<TopUpDto> _topUpValidator;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly IConfiguration _configuration;
+        private readonly ILogger<PaymentService> _logger;
 
         public PaymentService(IBaseRepository<Order> orderRepo,
                               IBalanceRepository balanceRepo,
                               IValidator<TopUpDto> topUpValidator,
                               IHttpClientFactory httpClientFactory,
-                              IConfiguration configuration)
+                              IConfiguration configuration,
+                              ILogger<PaymentService> logger)
         {
+            _logger = logger;
             _orderRepo = orderRepo;
             _balanceRepo = balanceRepo;
             _topUpValidator = topUpValidator;
@@ -254,13 +258,16 @@ namespace Service.Services
                 using var response = await _httpClientFactory.CreateClient().SendAsync(request);
                 if (!response.IsSuccessStatusCode)
                 {
+                    // Səbəb API çıxışında görünsün (səhv açar, valyuta və s.)
+                    _logger.LogWarning("Stripe returned {Status}: {Body}", (int)response.StatusCode, await response.Content.ReadAsStringAsync());
                     return null;
                 }
 
                 return JsonDocument.Parse(await response.Content.ReadAsStringAsync());
             }
-            catch (HttpRequestException)
+            catch (HttpRequestException ex)
             {
+                _logger.LogWarning(ex, "Stripe could not be reached");
                 return null;
             }
         }

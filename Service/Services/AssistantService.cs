@@ -13,13 +13,28 @@ namespace Service.Services
     public class AssistantService : IAssistantService
     {
         private const string Instruction = "You are the assistant on the website of Janz, an online coffee and tea shop in Baku, Azerbaijan. "
-            + "Always answer in the same language as the user's last message (Azerbaijani, Russian, English, Turkish or any other) and never switch to another language. "
             + "Keep answers short, at most three sentences. "
             + "You talk only about Janz: its products, choosing coffee or tea and brewing what the shop sells, ordering, delivery, payment, promo codes, the account, balance, journal and community on this site. "
-            + "For anything else (general knowledge, programming, news, politics, other shops, personal advice) reply with one short sentence, in the user's language, that you can only help with Janz. "
+            + "For anything else (general knowledge, programming, news, politics, other shops, personal advice) reply with one short sentence, in the answer language, that you can only help with Janz. "
             + "Facts: delivery in Baku takes 2-3 days and is free, regions get orders by Azerpost; pay by card online or cash or card to the courier; "
             + "promo codes are typed in the cart; order status is in the account under Orders; problems with an order go to WhatsApp +994 70 217 55 57. "
             + "Recommend only products from the list below and never invent products, prices or facts.";
+
+        // Ziyarətçi dili widget-də seçir; cavab yalnız o dildə olur (qarışıq dil olmasın deyə)
+        private static string LanguageRule(string? language)
+        {
+            var name = (language ?? string.Empty).Trim().ToLowerInvariant() switch
+            {
+                "az" => "Azerbaijani",
+                "ru" => "Russian",
+                _ => "English"
+            };
+
+            return $"The visitor chose {name} as the chat language. Answer ONLY in {name}, even if the question is written in another language, and never mix languages. "
+                + "The visitor may write the question in any language (Azerbaijani, Russian, English, Turkish, with or without special letters, with typos): decide whether it is about Janz by its meaning, never by its language. "
+                + "A question about coffee, tea, a brewing method, delivery time, payment or an order is always about Janz, so answer it. "
+                + "Keep product names as they are written in the list.";
+        }
 
         private readonly IBaseRepository<Product> _productRepo;
         private readonly IHttpClientFactory _httpClientFactory;
@@ -46,7 +61,7 @@ namespace Service.Services
                 .Where(p => p.IsVisible)
                 .Take(60)
                 .Select(p => $"{p.Name} ({p.Price} AZN)");
-            var instruction = Instruction + "\nProducts: " + string.Join("; ", products);
+            var instruction = Instruction + "\n" + LanguageRule(model.Language) + "\nProducts: " + string.Join("; ", products);
 
             var answer = await Gemini.AskAsync(_httpClientFactory, _configuration, instruction, question);
 

@@ -96,5 +96,30 @@ namespace Janz.Tests.Services
 
             Assert.Equal(string.Empty, answer.Answer);
         }
+
+        [Theory]
+        [InlineData("az", "Answer ONLY in Azerbaijani")]
+        [InlineData("RU", "Answer ONLY in Russian")]
+        [InlineData("en", "Answer ONLY in English")]
+        [InlineData("fr", "Answer ONLY in English")]
+        [InlineData(null, "Answer ONLY in English")]
+        public async Task Ask_AnswersInTheChosenLanguage(string? language, string expected)
+        {
+            var http = new FakeHttpClientFactory(HttpStatusCode.OK, GeminiAnswer);
+
+            await Create(http, "key").AskAsync(new AskAssistantDto { Question = "Which coffee?", Language = language });
+
+            Assert.Contains(expected, http.LastRequestBody!);
+        }
+
+        [Fact]
+        public async Task Ask_TellsGeminiToJudgeTopicByMeaningNotLanguage()
+        {
+            var http = new FakeHttpClientFactory(HttpStatusCode.OK, GeminiAnswer);
+
+            await Create(http, "key").AskAsync(new AskAssistantDto { Question = "Qehve" });
+
+            Assert.Contains("never by its language", http.LastRequestBody!);
+        }
     }
 }

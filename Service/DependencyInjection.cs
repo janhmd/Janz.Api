@@ -23,6 +23,7 @@ namespace Service
             services.AddScoped<ITagService, TagService>();
             services.AddScoped<IUserAdminService, UserAdminService>();
             services.AddScoped<IDashboardService, DashboardService>();
+            services.AddScoped<IAdminNotificationService, AdminNotificationService>();
             services.AddScoped<IReviewService, ReviewService>();
             services.AddScoped<ICouponService, CouponService>();
             services.AddScoped<IPaymentService, PaymentService>();

@@ -10,5 +10,8 @@ namespace Service.Services.Interfaces
         Task<GiftCertificateDto> CreateAsync(CreateGiftCertificateDto model);
         Task UpdateAsync(int id, UpdateGiftCertificateDto model);
         Task DeleteAsync(int id);
+
+        // Admin: sertifikatın kodu seçilən müştərilərin bildirişlərinə göndərilir, neçə nəfərə getdiyi qaytarılır
+        Task<int> NotifyAsync(int id, NotifyGiftCertificateDto model);
     }
 }

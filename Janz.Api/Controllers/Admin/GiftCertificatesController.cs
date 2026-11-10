@@ -44,6 +44,13 @@ namespace Janz.Api.Controllers.Admin
             return NoContent();
         }
 
+        // Sertifikatın kodu seçilən müştərilərin bildirişlərinə gedir
+        [HttpPost("{id:int}/notify")]
+        public async Task<IActionResult> Notify([FromRoute] int id, [FromBody] NotifyGiftCertificateDto request)
+        {
+            return Ok(new { sent = await _certificateService.NotifyAsync(id, request) });
+        }
+
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> Delete([FromRoute] int id)
         {

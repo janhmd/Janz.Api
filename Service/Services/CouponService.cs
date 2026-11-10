@@ -1,3 +1,4 @@
+using Domain.Constants;
 using Domain.Entities;
 using Domain.Enums;
 using FluentValidation;
@@ -13,16 +14,22 @@ namespace Service.Services
     {
         private readonly IBaseRepository<Coupon> _couponRepo;
         private readonly IBaseRepository<Order> _orderRepo;
+        private readonly IUserAdminService _userService;
+        private readonly INotificationService _notificationService;
         private readonly IValidator<CreateCouponDto> _createValidator;
         private readonly IValidator<UpdateCouponDto> _updateValidator;
 
         public CouponService(IBaseRepository<Coupon> couponRepo,
                              IBaseRepository<Order> orderRepo,
+                             IUserAdminService userService,
+                             INotificationService notificationService,
                              IValidator<CreateCouponDto> createValidator,
                              IValidator<UpdateCouponDto> updateValidator)
         {
             _couponRepo = couponRepo;
             _orderRepo = orderRepo;
+            _userService = userService;
+            _notificationService = notificationService;
             _createValidator = createValidator;
             _updateValidator = updateValidator;
         }
@@ -108,6 +115,59 @@ namespace Service.Services
             }
 
             await _couponRepo.DeleteAsync(coupon);
+        }
+
+        public async Task<int> NotifyAsync(int id, NotifyCouponDto model)
+        {
+            var coupon = await _couponRepo.GetByIdAsync(id);
+            if (coupon is null)
+            {
+                throw new NotFoundException();
+            }
+
+            var status = StatusOf(coupon);
+            if (status != "Active" && status != "Scheduled")
+            {
+                throw new BadRequestException($"This coupon can't be sent now: it is {status.ToLowerInvariant()}.");
+            }
+
+            var all = string.Equals(model.Audience, "All", StringComparison.OrdinalIgnoreCase);
+            var selected = string.Equals(model.Audience, "Selected", StringComparison.OrdinalIgnoreCase);
+            if (!all && !selected)
+            {
+                throw new BadRequestException("Choose who gets the coupon.");
+            }
+
+            // Yalnız bloklanmamış müştərilər; seçilmişlərdə bilinməyən və ya işçi hesabları atılır
+            var customers = (await _userService.GetAllAsync(Roles.User, false, null)).Select(m => m.Id).ToHashSet();
+            var recipients = all
+                ? customers.ToList()
+                : (model.UserIds ?? new List<string>()).Where(customers.Contains).Distinct().ToList();
+            if (recipients.Count == 0)
+            {
+                throw new BadRequestException("Choose at least one customer.");
+            }
+
+            var text = $"Use the code {coupon.Code} at checkout: {Describe(coupon)}.";
+            foreach (var userId in recipients)
+            {
+                await _notificationService.AddAsync(userId, NotificationKind.Shop, "A promo code for you.", text, "/Cart");
+            }
+
+            return recipients.Count;
+        }
+
+        // "10% off an order from ₼30, until 31.12.2026"
+        private static string Describe(Coupon coupon)
+        {
+            var text = coupon.Type == CouponType.Percent ? $"{coupon.Value:0.##}% off" : $"₼{coupon.Value:0.00} off";
+            text += coupon.MinOrder > 0 ? $" an order from ₼{coupon.MinOrder:0.00}" : " your order";
+            if (coupon.EndsAt is not null)
+            {
+                text += $", until {coupon.EndsAt.Value:dd.MM.yyyy}";
+            }
+
+            return text;
         }
 
         public async Task<CouponCheckDto> CheckAsync(string? code, decimal total, string userId)

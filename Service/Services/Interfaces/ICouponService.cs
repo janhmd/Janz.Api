@@ -11,6 +11,9 @@ namespace Service.Services.Interfaces
         Task UpdateAsync(int id, UpdateCouponDto model);
         Task DeleteAsync(int id);
 
+        // Admin: kuponun kodu seçilən müştərilərin bildirişlərinə göndərilir, neçə nəfərə getdiyi qaytarılır
+        Task<int> NotifyAsync(int id, NotifyCouponDto model);
+
         // Səbət: kod bu məbləğə tətbiq oluna bilərmi, endirim nə qədərdir
         Task<CouponCheckDto> CheckAsync(string? code, decimal total, string userId);
 

@@ -12,8 +12,9 @@ namespace Janz.Tests.Services
     {
         private readonly FakeRepository<ContactMessage> _repo = new();
         private readonly FakeEmailService _email = new();
+        private readonly FakeNotificationService _notifications = new();
 
-        private ContactService Create() => new(_repo, _email, new CreateContactMessageDtoValidator(), new ReplyContactMessageDtoValidator());
+        private ContactService Create() => new(_repo, _email, _notifications, new CreateContactMessageDtoValidator(), new ReplyContactMessageDtoValidator());
 
         private static CreateContactMessageDto Valid() => new()
         {
@@ -98,6 +99,33 @@ namespace Janz.Tests.Services
         public async Task GetById_ThrowsNotFound_ForUnknownId()
         {
             await Assert.ThrowsAsync<NotFoundException>(() => Create().GetByIdAsync(99));
+        }
+
+        [Fact]
+        public async Task Reply_NotifiesTheMember_ButNotAGuest()
+        {
+            _repo.Rows.Add(new ContactMessage { Id = 1, UserId = "user-1", Name = "Aysel", Email = "aysel@example.com", Topic = "Order", Message = "Where is my order?" });
+            _repo.Rows.Add(new ContactMessage { Id = 2, Name = "Guest", Email = "guest@example.com", Topic = "Other", Message = "A question for you" });
+
+            await Create().ReplyAsync(1, new ReplyContactMessageDto { Reply = "It ships tomorrow." });
+            await Create().ReplyAsync(2, new ReplyContactMessageDto { Reply = "Of course." });
+
+            var added = Assert.Single(_notifications.Added);
+            Assert.Equal("user-1", added.UserId);
+            Assert.Equal("/Profile#messages", added.Link);
+        }
+
+        [Fact]
+        public async Task GetMine_ReturnsOnlyOwnMessages_NewestFirst_WithReplies()
+        {
+            _repo.Rows.Add(new ContactMessage { Id = 1, UserId = "user-1", Name = "A", Email = "a@b.com", Topic = "Order", Message = "Older message here", CreatedAt = DateTime.UtcNow.AddDays(-2), IsAnswered = true, Reply = "Done." });
+            _repo.Rows.Add(new ContactMessage { Id = 2, UserId = "user-1", Name = "A", Email = "a@b.com", Topic = "Other", Message = "Newer message here", CreatedAt = DateTime.UtcNow.AddDays(-1) });
+            _repo.Rows.Add(new ContactMessage { Id = 3, UserId = "user-2", Name = "B", Email = "b@b.com", Topic = "Other", Message = "Someone else's one" });
+
+            var mine = (await Create().GetMineAsync("user-1")).ToList();
+
+            Assert.Equal(new[] { 2, 1 }, mine.Select(m => m.Id).ToArray());
+            Assert.Equal("Done.", mine[1].Reply);
         }
 
         [Fact]

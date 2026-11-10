@@ -1,4 +1,5 @@
 using Domain.Entities;
+using Domain.Enums;
 using FluentValidation;
 using Repository.Repositories.Interfaces;
 using Service.Helpers.DTOs.Contact;
@@ -17,16 +18,19 @@ namespace Service.Services
 
         private readonly IBaseRepository<ContactMessage> _messageRepo;
         private readonly IEmailService _emailService;
+        private readonly INotificationService _notificationService;
         private readonly IValidator<CreateContactMessageDto> _createValidator;
         private readonly IValidator<ReplyContactMessageDto> _replyValidator;
 
         public ContactService(IBaseRepository<ContactMessage> messageRepo,
                               IEmailService emailService,
+                              INotificationService notificationService,
                               IValidator<CreateContactMessageDto> createValidator,
                               IValidator<ReplyContactMessageDto> replyValidator)
         {
             _messageRepo = messageRepo;
             _emailService = emailService;
+            _notificationService = notificationService;
             _createValidator = createValidator;
             _replyValidator = replyValidator;
         }
@@ -98,6 +102,22 @@ namespace Service.Services
             message.IsAnswered = true;
             message.AnsweredAt = DateTime.UtcNow;
             await _messageRepo.UpdateAsync(message);
+
+            // Giriş etmiş müştəriyə saytda da bildiriş gedir: e-poçt gəlməsə belə cavabı hesabında görür
+            if (!string.IsNullOrEmpty(message.UserId))
+            {
+                await _notificationService.AddAsync(message.UserId, NotificationKind.Shop, "Support replied.",
+                    $"We answered your message about {message.Topic.ToLowerInvariant()}.", "/Profile#messages");
+            }
+        }
+
+        public async Task<IEnumerable<ContactMessageDto>> GetMineAsync(string userId)
+        {
+            return (await _messageRepo.GetAllAsync())
+                .Where(m => m.UserId == userId)
+                .OrderByDescending(m => m.CreatedAt)
+                .Select(ToDto)
+                .ToList();
         }
 
         private static string BuildEmail(ContactMessage message, string reply)

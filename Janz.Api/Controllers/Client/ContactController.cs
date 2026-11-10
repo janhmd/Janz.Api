@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Service.Helpers.DTOs.Contact;
 using Service.Services.Interfaces;
@@ -22,6 +23,14 @@ namespace Janz.Api.Controllers.Client
         {
             await _contactService.CreateAsync(request, User.FindFirstValue(ClaimTypes.NameIdentifier));
             return NoContent();
+        }
+
+        // Giriş etmiş müştərinin öz mesajları və cavablar
+        [HttpGet("mine")]
+        [Authorize]
+        public async Task<IActionResult> Mine()
+        {
+            return Ok(await _contactService.GetMineAsync(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty));
         }
     }
 }

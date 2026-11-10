@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Security.Claims;
 using System.Text;
 using Domain.Entities;
+using Janz.Api.Logging;
 using Janz.Api.Middlewares;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -13,6 +14,9 @@ using Repository.Data;
 using Service;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Loglar konsola və logs/ qovluğuna (hər gün ayrıca fayl) yazılır
+builder.Logging.AddFileLogger(builder.Configuration);
 
 // Formdan gələn qiymət "29.90" kimi nöqtə ilə gəlir: kompüterin dili (az-AZ, vergül) onu səhv oxumasın
 CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
@@ -147,6 +151,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+// Sorğu logu ən xaricdədir: xətanın çevrildiyi son statusu görür
+app.UseMiddleware<RequestLoggingMiddleware>();
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 if (!app.Environment.IsDevelopment())

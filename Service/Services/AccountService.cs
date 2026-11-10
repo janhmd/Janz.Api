@@ -4,6 +4,7 @@ using FluentValidation;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using System.Net;
 using System.Text;
 using Service.Helpers;
@@ -22,6 +23,7 @@ namespace Service.Services
         private readonly JwtTokenGenerator _jwtTokenGenerator;
         private readonly IEmailService _emailService;
         private readonly IConfiguration _configuration;
+        private readonly ILogger<AccountService> _logger;
 
         public AccountService(UserManager<AppUser> userManager,
                               IValidator<RegisterDto> registerValidator,
@@ -29,7 +31,8 @@ namespace Service.Services
                               IValidator<ResetPasswordDto> resetValidator,
                               JwtTokenGenerator jwtTokenGenerator,
                               IEmailService emailService,
-                              IConfiguration configuration)
+                              IConfiguration configuration,
+                              ILogger<AccountService> logger)
         {
             _userManager = userManager;
             _registerValidator = registerValidator;
@@ -38,6 +41,7 @@ namespace Service.Services
             _jwtTokenGenerator = jwtTokenGenerator;
             _emailService = emailService;
             _configuration = configuration;
+            _logger = logger;
         }
 
         private const string CodeProvider = "Janz";
@@ -71,6 +75,7 @@ namespace Service.Services
             }
 
             await _userManager.AddToRoleAsync(user, Roles.User);
+            _logger.LogInformation("New account registered: user {UserId}", user.Id);
             await SendConfirmationAsync(user);
             return ServiceResult<string>.Ok(user.Email!);
         }
@@ -114,9 +119,11 @@ namespace Service.Services
 
             if (await _userManager.IsLockedOutAsync(user))
             {
+                _logger.LogWarning("Login refused: user {UserId} is blocked", user.Id);
                 return ServiceResult<AuthResponseDto>.Fail("Your account is blocked. Please contact support.");
             }
 
+            _logger.LogInformation("User {UserId} logged in", user.Id);
             return ServiceResult<AuthResponseDto>.Ok(await BuildResponseAsync(user));
         }
 
@@ -248,6 +255,7 @@ namespace Service.Services
             var user = await _userManager.FindByEmailAsync(model.Email.Trim());
             if (user is null || !await _userManager.CheckPasswordAsync(user, model.Password))
             {
+                _logger.LogWarning("Login failed: {Reason}", user is null ? "no such account" : $"wrong password for user {user.Id}");
                 return ServiceResult<AuthResponseDto>.Fail("Email or password is wrong.");
             }
 

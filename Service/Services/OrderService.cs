@@ -1,6 +1,7 @@
 ﻿using Domain.Entities;
 using Domain.Enums;
 using FluentValidation;
+using Microsoft.Extensions.Logging;
 using Repository.Repositories.Interfaces;
 using Repository.Results;
 using Service.Helpers;
@@ -21,13 +22,15 @@ namespace Service.Services
         private readonly IValidator<UpdateOrderStatusDto> _statusValidator;
         private readonly INotificationService _notificationService;
         private readonly IRefundRepository _refundRepo;
+        private readonly ILogger<OrderService> _logger;
 
         public OrderService(IOrderRepository orderRepo,
                             IAddressRepository addressRepo,
                             IValidator<CreateOrderDto> createValidator,
                             IValidator<UpdateOrderStatusDto> statusValidator,
                             INotificationService notificationService,
-                            IRefundRepository refundRepo)
+                            IRefundRepository refundRepo,
+                            ILogger<OrderService> logger)
         {
             _orderRepo = orderRepo;
             _addressRepo = addressRepo;
@@ -35,6 +38,7 @@ namespace Service.Services
             _statusValidator = statusValidator;
             _notificationService = notificationService;
             _refundRepo = refundRepo;
+            _logger = logger;
         }
 
         public async Task<IEnumerable<OrderDto>> GetAllAsync(string userId)
@@ -86,8 +90,14 @@ namespace Service.Services
             // Stok, sifariş və səbət bir tranzaksiyada dəyişir (OrderRepository.PlaceAsync)
             var result = await _orderRepo.PlaceAsync(plan);
 
+            if (result.Outcome != OrderOutcome.Success)
+            {
+                _logger.LogWarning("Order not placed for user {UserId}: {Outcome}", userId, result.Outcome);
+            }
+
             if (result.Outcome == OrderOutcome.Success)
             {
+                _logger.LogInformation("Order #{OrderId} placed by user {UserId}, total {Total}", result.Order!.Id, userId, result.Order.Total);
                 await _notificationService.AddAsync(userId, NotificationKind.Shop, $"Order #{result.Order!.Id} was placed",
                     $"We received your order for ₼{result.Order.Total:0.00}.", $"/Orders/Detail/{result.Order.Id}");
             }
@@ -172,6 +182,7 @@ namespace Service.Services
                 throw new BadRequestException("The order status was changed by someone else. Refresh the page.");
             }
 
+            _logger.LogInformation("Order #{OrderId} moved from {From} to {To}", order.Id, order.Status, to);
             await _notificationService.AddAsync(order.UserId, NotificationKind.Shop, $"Order #{order.Id} is now {to}",
                 StatusText(to), $"/Orders/Detail/{order.Id}");
         }

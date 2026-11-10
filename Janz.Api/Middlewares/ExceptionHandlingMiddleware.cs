@@ -32,8 +32,9 @@ namespace Janz.Api.Middlewares
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Unhandled exception: {Method} {Path}", context.Request.Method, context.Request.Path);
-                await WriteAsync(context, StatusCodes.Status500InternalServerError, "Something went wrong. Please try again later.");
+                _logger.LogError(ex, "Unhandled exception: {Method} {Path} (trace {TraceId})", context.Request.Method, context.Request.Path, context.TraceIdentifier);
+                await WriteAsync(context, StatusCodes.Status500InternalServerError,
+                    $"Something went wrong. Please try again later. (Error code: {context.TraceIdentifier})");
             }
         }
 

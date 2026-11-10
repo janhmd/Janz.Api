@@ -1,6 +1,7 @@
 using Domain.Entities;
 using Domain.Enums;
 using FluentValidation;
+using Microsoft.Extensions.Logging;
 using Repository.Repositories.Interfaces;
 using Service.Helpers.DTOs.Refunds;
 using Service.Helpers.Exceptions;
@@ -19,18 +20,21 @@ namespace Service.Services
         private readonly INotificationService _notificationService;
         private readonly IValidator<CreateRefundDto> _createValidator;
         private readonly IValidator<ResolveRefundDto> _resolveValidator;
+        private readonly ILogger<RefundService> _logger;
 
         public RefundService(IRefundRepository refundRepo,
                              IOrderRepository orderRepo,
                              INotificationService notificationService,
                              IValidator<CreateRefundDto> createValidator,
-                             IValidator<ResolveRefundDto> resolveValidator)
+                             IValidator<ResolveRefundDto> resolveValidator,
+                             ILogger<RefundService> logger)
         {
             _refundRepo = refundRepo;
             _orderRepo = orderRepo;
             _notificationService = notificationService;
             _createValidator = createValidator;
             _resolveValidator = resolveValidator;
+            _logger = logger;
         }
 
         public async Task<ServiceResult<RefundDto>> CreateAsync(string userId, int orderId, CreateRefundDto model)
@@ -63,6 +67,7 @@ namespace Service.Services
                 Status = RefundStatus.Pending
             };
             await _refundRepo.AddAsync(request);
+            _logger.LogInformation("Refund requested for order #{OrderId} by user {UserId}, amount {Amount}", orderId, userId, request.Amount);
 
             return ServiceResult<RefundDto>.Ok(ToDto(request));
         }
@@ -117,6 +122,7 @@ namespace Service.Services
                 throw new BadRequestException("This request was already handled by someone else. Refresh the page.");
             }
 
+            _logger.LogInformation("Refund #{RefundId} for order #{OrderId} approved: {Amount} returned to the balance of user {UserId}", id, request.OrderId, amount, request.UserId);
             await _notificationService.AddAsync(request.UserId, NotificationKind.Shop,
                 $"Refund for order #{request.OrderId} approved",
                 $"{amount:0.00} was returned to your balance.", $"/Orders/Detail/{request.OrderId}");
@@ -141,6 +147,7 @@ namespace Service.Services
                 throw new BadRequestException("This request was already handled by someone else. Refresh the page.");
             }
 
+            _logger.LogInformation("Refund #{RefundId} for order #{OrderId} rejected", id, request.OrderId);
             await _notificationService.AddAsync(request.UserId, NotificationKind.Shop,
                 $"Refund for order #{request.OrderId} rejected",
                 model.Note.Trim(), $"/Orders/Detail/{request.OrderId}");

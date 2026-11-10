@@ -10,6 +10,9 @@ namespace Domain.Entities
         public ContactMessage ContactMessage { get; set; } = null!;
 
         public bool IsStaff { get; set; }
+
+        // IsStaff = true olanda yazan işçi
+        public string? StaffUserId { get; set; }
         public string Text { get; set; } = string.Empty;
     }
 }

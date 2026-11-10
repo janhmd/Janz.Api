@@ -10,7 +10,7 @@ namespace Service.Services.Interfaces
         // Admin və Support: mesajlar, status = "new" | "answered" | boş (hamısı)
         Task<IEnumerable<ContactMessageDto>> GetAllAsync(string? status);
         Task<ContactMessageDto> GetByIdAsync(int id);
-        Task ReplyAsync(int id, ReplyContactMessageDto model);
+        Task ReplyAsync(int id, ReplyContactMessageDto model, string? staffUserId = null);
 
         // Müştəri: öz yazdığı mesajlar və aldığı cavablar (e-poçt gəlməsə də saytda görünür)
         Task<IEnumerable<ContactMessageDto>> GetMineAsync(string userId);

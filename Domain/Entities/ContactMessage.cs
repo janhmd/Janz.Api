@@ -19,6 +19,9 @@ namespace Domain.Entities
         public string? Reply { get; set; }
         public DateTime? AnsweredAt { get; set; }
 
+        // İlk cavabı yazan işçi (Support/Admin); profil şəkli və adı müştəriyə göstərilir
+        public string? AnsweredById { get; set; }
+
         // Admin və ya Support "söhbəti bitir" basanda yazışma bağlanır: yeni yazı qəbul olunmur (müştəri bitirə bilməz).
         // Cavabdan sonra müştəri yenidən yaza bilər (ContactEntry), bağlanana qədər söhbət açıq qalır
         public bool IsClosed { get; set; }

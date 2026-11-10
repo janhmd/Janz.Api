@@ -10,6 +10,7 @@ namespace Domain.Configurations
         {
             builder.Property(m => m.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
             builder.Property(m => m.Text).IsRequired().HasMaxLength(2000);
+            builder.Property(m => m.StaffUserId).HasMaxLength(450);
 
             builder.HasIndex(m => new { m.ContactMessageId, m.CreatedAt });
 

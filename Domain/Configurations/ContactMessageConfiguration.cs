@@ -15,6 +15,7 @@ namespace Domain.Configurations
             builder.Property(m => m.Topic).IsRequired().HasMaxLength(20);
             builder.Property(m => m.Message).IsRequired().HasMaxLength(2000);
             builder.Property(m => m.Reply).HasMaxLength(2000);
+            builder.Property(m => m.AnsweredById).HasMaxLength(450);
 
             builder.HasIndex(m => new { m.IsAnswered, m.CreatedAt });
         }

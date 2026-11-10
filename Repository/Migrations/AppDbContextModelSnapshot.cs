@@ -274,6 +274,10 @@ b.HasKey("Id");
                     b.Property<bool>("IsStaff")
                         .HasColumnType("bit");
 
+                    b.Property<string>("StaffUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
                     b.Property<string>("Text")
                         .IsRequired()
                         .HasMaxLength(2000)
@@ -296,6 +300,10 @@ b.HasKey("Id");
 
                     b.Property<DateTime?>("AnsweredAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("AnsweredById")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<DateTime?>("ClosedAt")
                         .HasColumnType("datetime2");

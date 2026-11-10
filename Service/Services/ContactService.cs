@@ -1,5 +1,7 @@
 using Domain.Entities;
 using Domain.Enums;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using FluentValidation;
 using Repository.Repositories.Interfaces;
 using Service.Helpers.DTOs.Contact;
@@ -23,6 +25,7 @@ namespace Service.Services
         private readonly IValidator<CreateContactMessageDto> _createValidator;
         private readonly IValidator<ReplyContactMessageDto> _replyValidator;
         private readonly IValidator<FollowUpContactMessageDto> _followUpValidator;
+        private readonly UserManager<AppUser>? _userManager;
 
         public ContactService(IBaseRepository<ContactMessage> messageRepo,
                               IBaseRepository<ContactEntry> entryRepo,
@@ -30,7 +33,8 @@ namespace Service.Services
                               INotificationService notificationService,
                               IValidator<CreateContactMessageDto> createValidator,
                               IValidator<ReplyContactMessageDto> replyValidator,
-                              IValidator<FollowUpContactMessageDto> followUpValidator)
+                              IValidator<FollowUpContactMessageDto> followUpValidator,
+                              UserManager<AppUser>? userManager = null)
         {
             _messageRepo = messageRepo;
             _entryRepo = entryRepo;
@@ -39,6 +43,7 @@ namespace Service.Services
             _createValidator = createValidator;
             _replyValidator = replyValidator;
             _followUpValidator = followUpValidator;
+            _userManager = userManager;
         }
 
         public async Task CreateAsync(CreateContactMessageDto model, string? userId)
@@ -70,8 +75,10 @@ namespace Service.Services
             if (status == "new") messages = messages.Where(m => !m.IsAnswered && !m.IsClosed);
             else if (status == "answered") messages = messages.Where(m => m.IsAnswered);
 
+            var list = messages.OrderByDescending(m => m.CreatedAt).ToList();
             var entries = await LoadEntriesAsync();
-            return messages.OrderByDescending(m => m.CreatedAt).Select(m => ToDto(m, entries)).ToList();
+            var staff = await LoadStaffAsync(list, entries);
+            return list.Select(m => ToDto(m, entries, staff)).ToList();
         }
 
         public async Task<ContactMessageDto> GetByIdAsync(int id)
@@ -82,10 +89,11 @@ namespace Service.Services
                 throw new NotFoundException();
             }
 
-            return ToDto(message, await LoadEntriesAsync());
+            var entries = await LoadEntriesAsync();
+            return ToDto(message, entries, await LoadStaffAsync(new[] { message }, entries));
         }
 
-        public async Task ReplyAsync(int id, ReplyContactMessageDto model)
+        public async Task ReplyAsync(int id, ReplyContactMessageDto model, string? staffUserId = null)
         {
             await _replyValidator.EnsureValidAsync(model);
 
@@ -115,10 +123,11 @@ namespace Service.Services
             {
                 message.Reply = reply;
                 message.AnsweredAt = DateTime.UtcNow;
+                message.AnsweredById = staffUserId;
             }
             else
             {
-                await _entryRepo.AddAsync(new ContactEntry { ContactMessageId = message.Id, IsStaff = true, Text = reply });
+                await _entryRepo.AddAsync(new ContactEntry { ContactMessageId = message.Id, IsStaff = true, StaffUserId = staffUserId, Text = reply });
             }
 
             message.IsAnswered = true;
@@ -135,11 +144,12 @@ namespace Service.Services
         public async Task<IEnumerable<ContactMessageDto>> GetMineAsync(string userId)
         {
             var entries = await LoadEntriesAsync();
-            return (await _messageRepo.GetAllAsync())
+            var mine = (await _messageRepo.GetAllAsync())
                 .Where(m => m.UserId == userId)
                 .OrderByDescending(m => m.CreatedAt)
-                .Select(m => ToDto(m, entries))
                 .ToList();
+            var staff = await LoadStaffAsync(mine, entries);
+            return mine.Select(m => ToDto(m, entries, staff)).ToList();
         }
 
         public async Task FollowUpAsync(string userId, int id, FollowUpContactMessageDto model)
@@ -217,19 +227,52 @@ namespace Service.Services
                 + "<p>Janz</p>";
         }
 
-        private static ContactMessageDto ToDto(ContactMessage message, ILookup<int, ContactEntry> entries) => new()
+        // Cavab yazan işçilərin adı və profil şəkli (hesabdan canlı oxunur)
+        private async Task<Dictionary<string, (string Name, string? Avatar)>> LoadStaffAsync(IEnumerable<ContactMessage> messages, ILookup<int, ContactEntry> entries)
+        {
+            var result = new Dictionary<string, (string Name, string? Avatar)>();
+            if (_userManager is null) return result;
+
+            var ids = messages.Select(m => m.AnsweredById).Concat(messages.Select(m => m.UserId))
+                .Concat(messages.SelectMany(m => entries[m.Id]).Select(e => e.StaffUserId))
+                .Where(id => !string.IsNullOrEmpty(id))
+                .Distinct()
+                .ToList();
+            if (ids.Count == 0) return result;
+
+            var users = await _userManager.Users.Where(u => ids.Contains(u.Id)).Select(u => new { u.Id, u.Name, u.Surname, u.AvatarPath }).ToListAsync();
+            foreach (var u in users)
+            {
+                result[u.Id] = ((u.Name + " " + u.Surname).Trim(), string.IsNullOrEmpty(u.AvatarPath) ? null : u.AvatarPath);
+            }
+
+            return result;
+        }
+
+        private static ContactMessageDto ToDto(ContactMessage message, ILookup<int, ContactEntry> entries, Dictionary<string, (string Name, string? Avatar)> staff) => new()
         {
             Id = message.Id,
             Name = message.Name,
             Email = message.Email,
             Topic = message.Topic,
             Message = message.Message,
+            UserId = string.IsNullOrEmpty(message.UserId) ? null : message.UserId,
+            UserAvatar = message.UserId is not null && staff.TryGetValue(message.UserId, out var owner) ? owner.Avatar : null,
             IsMember = !string.IsNullOrEmpty(message.UserId),
             IsAnswered = message.IsAnswered,
             Reply = message.Reply,
             AnsweredAt = message.AnsweredAt,
+            AnsweredByName = message.AnsweredById is not null && staff.TryGetValue(message.AnsweredById, out var by) ? by.Name : null,
+            AnsweredByAvatar = message.AnsweredById is not null && staff.TryGetValue(message.AnsweredById, out var byAvatar) ? byAvatar.Avatar : null,
             CreatedAt = message.CreatedAt,
-            Entries = entries[message.Id].Select(e => new ContactEntryDto { IsStaff = e.IsStaff, Text = e.Text, CreatedAt = e.CreatedAt }).ToList(),
+            Entries = entries[message.Id].Select(e => new ContactEntryDto
+            {
+                IsStaff = e.IsStaff,
+                StaffName = e.StaffUserId is not null && staff.TryGetValue(e.StaffUserId, out var who) ? who.Name : null,
+                StaffAvatar = e.StaffUserId is not null && staff.TryGetValue(e.StaffUserId, out var pic) ? pic.Avatar : null,
+                Text = e.Text,
+                CreatedAt = e.CreatedAt
+            }).ToList(),
             IsClosed = message.IsClosed,
             ClosedAt = message.ClosedAt,
             CanFollowUp = !string.IsNullOrEmpty(message.UserId) && message.IsAnswered && !message.IsClosed

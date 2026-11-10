@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Domain.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -42,7 +43,7 @@ namespace Janz.Api.Controllers.Admin
         [HttpPost("{id:int}/reply")]
         public async Task<IActionResult> Reply([FromRoute] int id, [FromBody] ReplyContactMessageDto request)
         {
-            await _contactService.ReplyAsync(id, request);
+            await _contactService.ReplyAsync(id, request, User.FindFirstValue(ClaimTypes.NameIdentifier));
             return NoContent();
         }
     }

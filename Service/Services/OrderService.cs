@@ -1,10 +1,11 @@
-using Domain.Entities;
+﻿using Domain.Entities;
 using Domain.Enums;
 using FluentValidation;
 using Repository.Repositories.Interfaces;
 using Repository.Results;
 using Service.Helpers;
 using Service.Helpers.DTOs.Orders;
+using Service.Helpers.DTOs.Refunds;
 using Service.Helpers.Exceptions;
 using Service.Helpers.Responses;
 using Service.Helpers.Validators;
@@ -19,18 +20,21 @@ namespace Service.Services
         private readonly IValidator<CreateOrderDto> _createValidator;
         private readonly IValidator<UpdateOrderStatusDto> _statusValidator;
         private readonly INotificationService _notificationService;
+        private readonly IRefundRepository _refundRepo;
 
         public OrderService(IOrderRepository orderRepo,
                             IAddressRepository addressRepo,
                             IValidator<CreateOrderDto> createValidator,
                             IValidator<UpdateOrderStatusDto> statusValidator,
-                            INotificationService notificationService)
+                            INotificationService notificationService,
+                            IRefundRepository refundRepo)
         {
             _orderRepo = orderRepo;
             _addressRepo = addressRepo;
             _createValidator = createValidator;
             _statusValidator = statusValidator;
             _notificationService = notificationService;
+            _refundRepo = refundRepo;
         }
 
         public async Task<IEnumerable<OrderDto>> GetAllAsync(string userId)
@@ -48,7 +52,17 @@ namespace Service.Services
                 return ServiceResult<OrderDto>.NotFound();
             }
 
-            return ServiceResult<OrderDto>.Ok(ToDto(order, order.Items));
+            var dto = ToDto(order, order.Items);
+            await FillRefundAsync(dto, order);
+            return ServiceResult<OrderDto>.Ok(dto);
+        }
+
+        // Sifariş səhifəsində pulu geri qaytarma bölməsi: ən son sorğu və yeni sorğu göndərmək olarmı
+        private async Task FillRefundAsync(OrderDto dto, Order order)
+        {
+            var latest = await _refundRepo.GetLatestByOrderAsync(order.Id);
+            dto.Refund = latest is null ? null : RefundService.ToDto(latest);
+            dto.CanRequestRefund = RefundService.CannotRequestReason(order, latest) is null;
         }
 
         public async Task<ServiceResult<OrderDto>> CreateFromCartAsync(string userId, CreateOrderDto model)
@@ -131,7 +145,9 @@ namespace Service.Services
                 throw new NotFoundException();
             }
 
-            return ToAdminDto(order);
+            var dto = ToAdminDto(order);
+            await FillRefundAsync(dto, order);
+            return dto;
         }
 
         public async Task ChangeStatusAsync(int id, UpdateOrderStatusDto model)

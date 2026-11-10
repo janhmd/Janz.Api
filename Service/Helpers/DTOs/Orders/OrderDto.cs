@@ -1,3 +1,5 @@
+using Service.Helpers.DTOs.Refunds;
+
 namespace Service.Helpers.DTOs.Orders
 {
     public class OrderDto
@@ -17,6 +19,9 @@ namespace Service.Helpers.DTOs.Orders
         public string DeliveryLine { get; set; } = string.Empty;
         public string DeliveryCity { get; set; } = string.Empty;
         public string DeliveryPostalCode { get; set; } = string.Empty;
+        // Pulun geri qaytarılması: ən son sorğu (yoxdursa null) və yeni sorğu göndərmək olarmı
+        public RefundDto? Refund { get; set; }
+        public bool CanRequestRefund { get; set; }
         public List<OrderItemDto> Items { get; set; } = new List<OrderItemDto>();
     }
 }

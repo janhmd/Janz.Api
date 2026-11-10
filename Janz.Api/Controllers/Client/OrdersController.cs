@@ -1,8 +1,9 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Service.Helpers.DTOs.Orders;
 using Service.Helpers.DTOs.Payments;
+using Service.Helpers.DTOs.Refunds;
 using Service.Helpers.Responses;
 using Service.Services.Interfaces;
 
@@ -15,11 +16,13 @@ namespace Janz.Api.Controllers.Client
     {
         private readonly IOrderService _orderService;
         private readonly IPaymentService _paymentService;
+        private readonly IRefundService _refundService;
 
-        public OrdersController(IOrderService orderService, IPaymentService paymentService)
+        public OrdersController(IOrderService orderService, IPaymentService paymentService, IRefundService refundService)
         {
             _orderService = orderService;
             _paymentService = paymentService;
+            _refundService = refundService;
         }
 
         private string UserId
@@ -62,6 +65,13 @@ namespace Janz.Api.Controllers.Client
         public async Task<IActionResult> ConfirmPayment(int id, [FromBody] ConfirmPaymentDto model)
         {
             return ToResponse(await _paymentService.ConfirmAsync(UserId, id, model));
+        }
+
+        // Çatdırılmış sifariş üçün pulu geri istəmək: Admin və ya Support qəbul edəndə məbləğ balansa qayıdır
+        [HttpPost("{id:int}/refund")]
+        public async Task<IActionResult> RequestRefund(int id, [FromBody] CreateRefundDto model)
+        {
+            return ToResponse(await _refundService.CreateAsync(UserId, id, model));
         }
 
         private static IActionResult ToResponse<T>(ServiceResult<T> result)

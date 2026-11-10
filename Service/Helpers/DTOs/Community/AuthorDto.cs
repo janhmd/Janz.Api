@@ -8,5 +8,8 @@ namespace Service.Helpers.DTOs.Community
         public string? Nickname { get; set; }
         public string? AvatarPath { get; set; }
         public string Role { get; set; } = string.Empty;
+
+        // İşçi hesabıdırsa rolu (Support, Editor, Admin, SuperAdmin), adi istifadəçi üçün boş
+        public string? StaffRole { get; set; }
     }
 }

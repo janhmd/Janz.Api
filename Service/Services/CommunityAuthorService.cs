@@ -51,11 +51,18 @@ namespace Service.Services
                     Name = user is null ? "Coffee lover" : DisplayName(user),
                     Nickname = user?.Nickname,
                     AvatarPath = user?.AvatarPath,
-                    Role = string.IsNullOrWhiteSpace(city) ? level : $"{level}, {city}"
+                    Role = string.IsNullOrWhiteSpace(city) ? level : $"{level}, {city}",
+                    StaffRole = user is null ? null : StaffRoleOf(await _userManager.GetRolesAsync(user))
                 };
             }
 
             return result;
+        }
+
+        public static string? StaffRoleOf(IEnumerable<string> roles)
+        {
+            var role = Domain.Constants.Roles.Highest(roles);
+            return Domain.Constants.Roles.Staff.Contains(role) ? role : null;
         }
 
         private static string DisplayName(AppUser user)

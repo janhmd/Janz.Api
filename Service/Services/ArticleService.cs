@@ -470,6 +470,7 @@ namespace Service.Services
                 Id = comment.Id,
                 AuthorName = string.IsNullOrWhiteSpace(name) ? "Coffee lover" : name,
                 AuthorAvatar = user?.AvatarPath,
+                StaffRole = user is null ? null : CommunityAuthorService.StaffRoleOf(await _userManager.GetRolesAsync(user)),
                 Text = comment.Text,
                 CreatedAt = comment.CreatedAt,
                 Likes = votes.Count(m => m.Value > 0),

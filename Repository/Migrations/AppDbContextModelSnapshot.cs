@@ -255,6 +255,37 @@ b.HasKey("Id");
                     b.ToTable("Categories");
                 });
 
+            modelBuilder.Entity("Domain.Entities.ContactEntry", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ContactMessageId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETUTCDATE()");
+
+                    b.Property<bool>("IsStaff")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ContactMessageId", "CreatedAt");
+
+                    b.ToTable("ContactEntries");
+                });
+
             modelBuilder.Entity("Domain.Entities.ContactMessage", b =>
                 {
                     b.Property<int>("Id")
@@ -264,6 +295,9 @@ b.HasKey("Id");
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime?>("AnsweredAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("ClosedAt")
                         .HasColumnType("datetime2");
 
                     b.Property<DateTime>("CreatedAt")
@@ -277,6 +311,9 @@ b.HasKey("Id");
                         .HasColumnType("nvarchar(150)");
 
                     b.Property<bool>("IsAnswered")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsClosed")
                         .HasColumnType("bit");
 
                     b.Property<string>("Message")
@@ -2574,6 +2611,17 @@ b.HasKey("Id");
                     b.HasIndex("Status", "CreatedAt");
 
                     b.ToTable("RefundRequests");
+                });
+
+            modelBuilder.Entity("Domain.Entities.ContactEntry", b =>
+                {
+                    b.HasOne("Domain.Entities.ContactMessage", "ContactMessage")
+                        .WithMany()
+                        .HasForeignKey("ContactMessageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ContactMessage");
                 });
 
             modelBuilder.Entity("Domain.Entities.RefundRequest", b =>

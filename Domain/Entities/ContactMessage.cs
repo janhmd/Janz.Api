@@ -18,5 +18,10 @@ namespace Domain.Entities
         public bool IsAnswered { get; set; }
         public string? Reply { get; set; }
         public DateTime? AnsweredAt { get; set; }
+
+        // Müştəri "söhbəti bitir" basanda yazışma bağlanır: yeni yazı qəbul olunmur.
+        // Cavabdan sonra müştəri yenidən yaza bilər (ContactEntry), bağlanana qədər söhbət açıq qalır
+        public bool IsClosed { get; set; }
+        public DateTime? ClosedAt { get; set; }
     }
 }

@@ -11,10 +11,11 @@ namespace Janz.Tests.Services
     public class ContactServiceTests
     {
         private readonly FakeRepository<ContactMessage> _repo = new();
+        private readonly FakeRepository<ContactEntry> _entries = new();
         private readonly FakeEmailService _email = new();
         private readonly FakeNotificationService _notifications = new();
 
-        private ContactService Create() => new(_repo, _email, _notifications, new CreateContactMessageDtoValidator(), new ReplyContactMessageDtoValidator());
+        private ContactService Create() => new(_repo, _entries, _email, _notifications, new CreateContactMessageDtoValidator(), new ReplyContactMessageDtoValidator(), new FollowUpContactMessageDtoValidator());
 
         private static CreateContactMessageDto Valid() => new()
         {

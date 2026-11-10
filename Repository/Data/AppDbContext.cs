@@ -44,6 +44,7 @@ public class AppDbContext : IdentityDbContext<AppUser>
     public DbSet<SitePage> SitePages { get; set; }
     public DbSet<SiteSetting> SiteSettings { get; set; }
     public DbSet<ContactMessage> ContactMessages { get; set; }
+    public DbSet<ContactEntry> ContactEntries { get; set; }
     public DbSet<RefundRequest> RefundRequests { get; set; }
     public DbSet<SiteTile> SiteTiles { get; set; }
 

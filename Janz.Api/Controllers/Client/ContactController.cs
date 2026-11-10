@@ -32,5 +32,23 @@ namespace Janz.Api.Controllers.Client
         {
             return Ok(await _contactService.GetMineAsync(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty));
         }
+
+        // Cavab kömək etməyibsə müştəri yenidən yazır
+        [HttpPost("{id:int}/follow-up")]
+        [Authorize]
+        public async Task<IActionResult> FollowUp(int id, [FromBody] FollowUpContactMessageDto request)
+        {
+            await _contactService.FollowUpAsync(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty, id, request);
+            return NoContent();
+        }
+
+        // Müştəri söhbəti bitirir
+        [HttpPost("{id:int}/close")]
+        [Authorize]
+        public async Task<IActionResult> Close(int id)
+        {
+            await _contactService.CloseAsync(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty, id);
+            return NoContent();
+        }
     }
 }

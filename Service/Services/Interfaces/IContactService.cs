@@ -14,5 +14,11 @@ namespace Service.Services.Interfaces
 
         // Müştəri: öz yazdığı mesajlar və aldığı cavablar (e-poçt gəlməsə də saytda görünür)
         Task<IEnumerable<ContactMessageDto>> GetMineAsync(string userId);
+
+        // Müştəri: cavab kömək etməyibsə yenidən yazır (mesaj yenə support-un növbəsinə düşür)
+        Task FollowUpAsync(string userId, int id, FollowUpContactMessageDto model);
+
+        // Müştəri: "söhbəti bitir". Bağlanandan sonra heç kim yeni yazı əlavə edə bilməz
+        Task CloseAsync(string userId, int id);
     }
 }

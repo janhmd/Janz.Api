@@ -23,7 +23,7 @@ namespace Janz.Api.Controllers.Admin
         {
             var manager = User.IsInRole(Roles.SuperAdmin) || User.IsInRole(Roles.Admin);
             var types = new List<string>();
-            if (manager || User.IsInRole(Roles.Support)) types.Add("order");
+            if (manager || User.IsInRole(Roles.Support)) { types.Add("order"); types.Add("message"); }
             if (manager) { types.Add("report"); types.Add("review"); }
             if (manager) types.Add("stock");
 

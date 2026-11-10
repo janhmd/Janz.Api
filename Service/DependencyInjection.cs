@@ -43,6 +43,7 @@ namespace Service
             services.AddScoped<IAdminAssistantService, AdminAssistantService>();
             services.AddScoped<IPageService, PageService>();
             services.AddScoped<ISettingService, SettingService>();
+            services.AddScoped<IContactService, ContactService>();
             services.AddHttpClient();
             services.AddValidatorsFromAssemblyContaining<RegisterDtoValidator>();
             return services;

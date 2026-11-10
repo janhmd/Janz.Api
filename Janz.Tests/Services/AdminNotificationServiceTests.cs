@@ -8,15 +8,16 @@ namespace Janz.Tests.Services
 {
     public class AdminNotificationServiceTests
     {
-        private static readonly string[] AllTypes = { "order", "report", "review", "stock" };
+        private static readonly string[] AllTypes = { "order", "message", "report", "review", "stock" };
 
         private readonly FakeOrderRepository _orders = new();
         private readonly FakeRepository<Product> _products = new();
         private readonly FakeRepository<PostReport> _reports = new();
         private readonly FakeRepository<ProductReview> _productReviews = new();
         private readonly FakeRepository<ShopReview> _shopReviews = new();
+        private readonly FakeRepository<ContactMessage> _messages = new();
 
-        private AdminNotificationService Create() => new(_orders, _products, _reports, _productReviews, _shopReviews);
+        private AdminNotificationService Create() => new(_orders, _products, _reports, _productReviews, _shopReviews, _messages);
 
         [Fact]
         public async Task Get_ReturnsNothing_WhenNoTypesAllowed()
@@ -121,6 +122,32 @@ namespace Janz.Tests.Services
             var result = await Create().GetAsync(AllTypes);
 
             Assert.Equal(new[] { "danger", "warning", "info" }, result.Select(m => m.Severity).ToArray());
+        }
+
+        [Fact]
+        public async Task Get_ListsOnlyUnansweredMessages_ComplaintsAreDanger()
+        {
+            _messages.Rows.Add(new ContactMessage { Id = 1, Name = "Aysel", Topic = "Complaint", Message = "The parcel arrived damaged", IsAnswered = false });
+            _messages.Rows.Add(new ContactMessage { Id = 2, Name = "Kamran", Topic = "Order", Message = "When will it arrive?", IsAnswered = false });
+            _messages.Rows.Add(new ContactMessage { Id = 3, Name = "Leyla", Topic = "Other", Message = "Thanks for the help", IsAnswered = true });
+
+            var result = await Create().GetAsync(new[] { "message" });
+
+            Assert.Equal(2, result.Count);
+            Assert.All(result, m => Assert.Equal("message", m.Type));
+            Assert.Equal("danger", result.First(m => m.Link.EndsWith("/1")).Severity);
+            Assert.Equal("warning", result.First(m => m.Link.EndsWith("/2")).Severity);
+            Assert.DoesNotContain(result, m => m.Link.EndsWith("/3"));
+        }
+
+        [Fact]
+        public async Task Get_SkipsMessages_WhenTypeNotAllowed()
+        {
+            _messages.Rows.Add(new ContactMessage { Id = 1, Name = "Aysel", Topic = "Order", Message = "Where is my order?" });
+
+            var result = await Create().GetAsync(new[] { "order" });
+
+            Assert.Empty(result);
         }
     }
 }

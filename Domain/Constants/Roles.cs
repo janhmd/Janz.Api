@@ -14,7 +14,7 @@ public static class Roles
     public static readonly Dictionary<string, string> Descriptions = new()
     {
         [User] = "Customer of the shop, no admin access",
-        [Support] = "Sees orders and users, changes order status",
+        [Support] = "Sees orders, users and customer messages, changes order status and answers messages",
         [Editor] = "Journal articles only",
         [Admin] = "Runs the shop and content, including community, pages and reviews; cannot give roles or change settings",
         [SuperAdmin] = "Everything, plus giving roles and changing settings"

@@ -6,7 +6,7 @@ using Service.Services.Interfaces;
 
 namespace Service.Services
 {
-    // Admin üçün bildirişlər: gözləyən sifarişlər, baxılmamış şikayətlər, yeni rəylər, az qalan stok.
+    // Admin üçün bildirişlər: gözləyən sifarişlər, cavabsız müştəri mesajları, baxılmamış şikayətlər, yeni rəylər, az qalan stok.
     // Hamısı mövcud cədvəllərdən hesablanır, ona görə "oxundu" vəziyyəti yoxdur: problem həll olunanda bildiriş özü itir
     public class AdminNotificationService : IAdminNotificationService
     {
@@ -19,18 +19,21 @@ namespace Service.Services
         private readonly IBaseRepository<PostReport> _reportRepo;
         private readonly IBaseRepository<ProductReview> _productReviewRepo;
         private readonly IBaseRepository<ShopReview> _shopReviewRepo;
+        private readonly IBaseRepository<ContactMessage> _messageRepo;
 
         public AdminNotificationService(IOrderRepository orderRepo,
                                         IBaseRepository<Product> productRepo,
                                         IBaseRepository<PostReport> reportRepo,
                                         IBaseRepository<ProductReview> productReviewRepo,
-                                        IBaseRepository<ShopReview> shopReviewRepo)
+                                        IBaseRepository<ShopReview> shopReviewRepo,
+                                        IBaseRepository<ContactMessage> messageRepo)
         {
             _orderRepo = orderRepo;
             _productRepo = productRepo;
             _reportRepo = reportRepo;
             _productReviewRepo = productReviewRepo;
             _shopReviewRepo = shopReviewRepo;
+            _messageRepo = messageRepo;
         }
 
         public async Task<List<AdminNotificationDto>> GetAsync(IReadOnlyCollection<string> types)
@@ -51,6 +54,24 @@ namespace Service.Services
                         Text = $"{order.DeliveryFullName} · {order.Total:0.00} · {(order.IsPaid ? "paid" : "not paid yet")}",
                         Link = $"/Admin/Orders/Detail/{order.Id}",
                         CreatedAt = order.CreatedAt
+                    });
+                }
+            }
+
+            if (types.Contains("message"))
+            {
+                var messages = (await _messageRepo.GetAllAsync()).Where(m => !m.IsAnswered)
+                    .OrderByDescending(m => m.CreatedAt).Take(MaxPerType);
+                foreach (var message in messages)
+                {
+                    result.Add(new AdminNotificationDto
+                    {
+                        Type = "message",
+                        Severity = message.Topic == "Complaint" ? "danger" : "warning",
+                        Title = message.Topic == "Complaint" ? $"New complaint from {message.Name}" : $"New message from {message.Name}",
+                        Text = $"{message.Topic} · {Shorten(message.Message)}",
+                        Link = $"/Admin/Messages/Detail/{message.Id}",
+                        CreatedAt = message.CreatedAt
                     });
                 }
             }

@@ -43,6 +43,7 @@ public class AppDbContext : IdentityDbContext<AppUser>
     public DbSet<PostReport> PostReports { get; set; }
     public DbSet<SitePage> SitePages { get; set; }
     public DbSet<SiteSetting> SiteSettings { get; set; }
+    public DbSet<ContactMessage> ContactMessages { get; set; }
 
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
     {

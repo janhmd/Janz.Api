@@ -1,6 +1,7 @@
 using Domain.Entities;
 using FluentValidation;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Repository.Repositories.Interfaces;
 using Service.Helpers;
 using Service.Helpers.DTOs.Articles;
@@ -100,7 +101,20 @@ namespace Service.Services
             dto.Images = await ImagesOfAsync(article.Id);
             dto.AuthorName = article.AuthorName;
             dto.AuthorRole = article.AuthorRole;
+            dto.AuthorAvatar = await AuthorAvatarAsync(article.AuthorName);
             return dto;
+        }
+
+        // Müəllif adı mətn kimi yazılır; eyni ad və soyadlı hesabın profil şəkli varsa o göstərilir
+        private async Task<string?> AuthorAvatarAsync(string? authorName)
+        {
+            var name = authorName?.Trim();
+            if (string.IsNullOrEmpty(name)) return null;
+
+            return await _userManager.Users
+                .Where(u => u.AvatarPath != null && u.AvatarPath != "" && (u.Name + " " + u.Surname) == name)
+                .Select(u => u.AvatarPath)
+                .FirstOrDefaultAsync();
         }
 
         public async Task<int> LikeAsync(int id, string userId, bool like)

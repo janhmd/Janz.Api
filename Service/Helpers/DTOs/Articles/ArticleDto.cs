@@ -7,5 +7,6 @@ namespace Service.Helpers.DTOs.Articles
         public List<string> Images { get; set; } = new List<string>();
         public string? AuthorName { get; set; }
         public string? AuthorRole { get; set; }
+        public string? AuthorAvatar { get; set; }
     }
 }

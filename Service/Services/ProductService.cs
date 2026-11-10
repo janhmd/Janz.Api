@@ -19,6 +19,7 @@ namespace Service.Services
         private readonly IBaseRepository<ProductTag> _productTagRepo;
         private readonly IBaseRepository<ProductImage> _productImageRepo;
         private readonly IBaseRepository<OrderItem> _orderItemRepo;
+        private readonly IBaseRepository<Order> _orderRepo;
         private readonly IBaseRepository<ProductVariant> _variantRepo;
         private readonly IBaseRepository<ProductVariantImage> _variantImageRepo;
         private readonly IBaseRepository<ProductReview> _reviewRepo;
@@ -33,6 +34,7 @@ namespace Service.Services
                               IBaseRepository<ProductTag> productTagRepo,
                               IBaseRepository<ProductImage> productImageRepo,
                               IBaseRepository<OrderItem> orderItemRepo,
+                              IBaseRepository<Order> orderRepo,
                               IBaseRepository<ProductVariant> variantRepo,
                               IBaseRepository<ProductVariantImage> variantImageRepo,
                               IBaseRepository<CartItem> cartItemRepo,
@@ -47,6 +49,7 @@ namespace Service.Services
             _productTagRepo = productTagRepo;
             _productImageRepo = productImageRepo;
             _orderItemRepo = orderItemRepo;
+            _orderRepo = orderRepo;
             _variantRepo = variantRepo;
             _variantImageRepo = variantImageRepo;
             _reviewRepo = reviewRepo;
@@ -504,6 +507,13 @@ namespace Service.Services
             var variantImages = (await _variantImageRepo.GetAllAsync()).ToLookup(m => m.VariantId);
             var reviews = (await _reviewRepo.GetAllAsync()).Where(m => !m.IsHidden).ToLookup(m => m.ProductId);
 
+            // Satış sayı: ləğv olunmuş sifarişlər sayılmır
+            var activeOrders = (await _orderRepo.GetAllAsync()).Where(m => m.Status != OrderStatus.Cancelled).Select(m => m.Id).ToHashSet();
+            var sold = (await _orderItemRepo.GetAllAsync())
+                .Where(m => activeOrders.Contains(m.OrderId))
+                .GroupBy(m => m.ProductId)
+                .ToDictionary(g => g.Key, g => g.Sum(m => m.Quantity));
+
             var result = new List<ProductDto>();
             foreach (var product in products)
             {
@@ -523,6 +533,7 @@ namespace Service.Services
                     .ToList();
                 var productReviews = reviews[product.Id].ToList();
                 dto.ReviewCount = productReviews.Count;
+                dto.SoldCount = sold.GetValueOrDefault(product.Id);
                 dto.Rating = productReviews.Count == 0 ? null : Math.Round((decimal)productReviews.Average(m => m.Rating), 1);
                 result.Add(dto);
             }

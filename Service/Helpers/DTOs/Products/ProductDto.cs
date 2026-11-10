@@ -31,6 +31,9 @@ namespace Service.Helpers.DTOs.Products
         public decimal? Rating { get; set; }
         public int ReviewCount { get; set; }
         public DateTime CreatedAt { get; set; }
+
+        // Ləğv olunmamış sifarişlərdə neçə ədəd satılıb (ana səhifədə "Popular" bunun üzrə seçilir)
+        public int SoldCount { get; set; }
         public List<ProductVariantDto> Variants { get; set; } = new List<ProductVariantDto>();
         public int CategoryId { get; set; }
         public string CategoryName { get; set; } = string.Empty;

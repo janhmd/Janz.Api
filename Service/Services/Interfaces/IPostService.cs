@@ -11,6 +11,9 @@ namespace Service.Services.Interfaces
         Task<List<PostDto>> GetByUserAsync(string authorId, string? viewerId);
 
         Task<IEnumerable<PostDto>> GetSavedAsync(string viewerId);
+
+        // Community-də bu məhsulla paylaşılan postlar (məhsulun səhifəsindəki Comments bölməsi üçün)
+        Task<List<PostDto>> GetByProductAsync(int productId, string? viewerId);
         Task<PostDto> CreateAsync(string userId, CreatePostDto model);
         Task DeleteAsync(string userId, int id);
         Task<VoteResultDto> VoteAsync(string userId, int id, PostVoteDto model);

@@ -96,6 +96,15 @@ namespace Service.Services
             return (await BuildAsync(posts, viewerId)).OrderByDescending(m => m.CreatedAt).ThenByDescending(m => m.Id).ToList();
         }
 
+        public async Task<List<PostDto>> GetByProductAsync(int productId, string? viewerId)
+        {
+            var blocked = await BlockedByAsync(viewerId);
+            var posts = (await _postRepo.GetAllAsync())
+                .Where(m => m.ProductId == productId && !m.IsHidden && !blocked.Contains(m.UserId))
+                .ToList();
+            return (await BuildAsync(posts, viewerId)).OrderByDescending(m => m.CreatedAt).ThenByDescending(m => m.Id).ToList();
+        }
+
         public async Task<IEnumerable<PostDto>> GetSavedAsync(string viewerId)
         {
             var saved = (await _savedRepo.GetAllAsync()).Where(m => m.UserId == viewerId).Select(m => m.PostId).ToHashSet();

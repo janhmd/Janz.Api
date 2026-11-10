@@ -28,6 +28,12 @@ namespace Janz.Api.Controllers.Client
             return Ok(await _postService.GetFeedAsync(tab, tag, search, scope, UserId));
         }
 
+        [HttpGet("product/{productId:int}")]
+        public async Task<IActionResult> GetByProduct([FromRoute] int productId)
+        {
+            return Ok(await _postService.GetByProductAsync(productId, UserId));
+        }
+
         [HttpGet("saved")]
         [Authorize]
         public async Task<IActionResult> GetSaved()

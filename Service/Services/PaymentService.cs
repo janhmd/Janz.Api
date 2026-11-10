@@ -100,6 +100,17 @@ namespace Service.Services
             return ServiceResult<PaymentSessionDto>.Ok(new PaymentSessionDto { Url = url ?? string.Empty });
         }
 
+        public async Task RefreshAsync(string userId, int orderId)
+        {
+            var order = await _orderRepo.GetByIdAsync(orderId);
+            if (order is null || order.UserId != userId || order.IsPaid || string.IsNullOrWhiteSpace(order.PaymentSessionId))
+            {
+                return;
+            }
+
+            await ConfirmAsync(userId, orderId, new ConfirmPaymentDto { SessionId = order.PaymentSessionId });
+        }
+
         public async Task<ServiceResult<PaymentResultDto>> ConfirmAsync(string userId, int orderId, ConfirmPaymentDto model)
         {
             var order = await _orderRepo.GetByIdAsync(orderId);

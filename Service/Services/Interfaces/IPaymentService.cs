@@ -12,6 +12,9 @@ namespace Service.Services.Interfaces
         // Sessiya ödənibsə sifariş ödənmiş olur
         Task<ServiceResult<PaymentResultDto>> ConfirmAsync(string userId, int orderId, ConfirmPaymentDto model);
 
+        // Ödəniş başladılıb, amma sifariş hələ ödənmiş sayılmırsa: Stripe-dan yenidən yoxlanılır (səhifəyə qayıdılmayıb ola bilər)
+        Task RefreshAsync(string userId, int orderId);
+
         // Balansı kartla artırmaq: təsdiqlənməmiş hərəkət və Stripe sessiyası yaradılır
         Task<ServiceResult<PaymentSessionDto>> CreateTopUpSessionAsync(string userId, TopUpDto model);
 

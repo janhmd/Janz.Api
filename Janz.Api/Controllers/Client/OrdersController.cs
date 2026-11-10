@@ -39,6 +39,7 @@ namespace Janz.Api.Controllers.Client
         [HttpGet("{id:int}")]
         public async Task<IActionResult> GetById(int id)
         {
+            await _paymentService.RefreshAsync(UserId, id);
             return ToResponse(await _orderService.GetByIdAsync(UserId, id));
         }
 

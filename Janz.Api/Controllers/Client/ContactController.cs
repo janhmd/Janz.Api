@@ -41,14 +41,5 @@ namespace Janz.Api.Controllers.Client
             await _contactService.FollowUpAsync(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty, id, request);
             return NoContent();
         }
-
-        // Müştəri söhbəti bitirir
-        [HttpPost("{id:int}/close")]
-        [Authorize]
-        public async Task<IActionResult> Close(int id)
-        {
-            await _contactService.CloseAsync(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty, id);
-            return NoContent();
-        }
     }
 }

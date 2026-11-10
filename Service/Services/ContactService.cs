@@ -149,7 +149,7 @@ namespace Service.Services
             var message = await FindMineAsync(userId, id);
             if (message.IsClosed)
             {
-                throw new BadRequestException("This chat is ended. Please write a new message to support.");
+                throw new BadRequestException("Support ended this chat. Please write a new message.");
             }
 
             if (!message.IsAnswered)
@@ -164,22 +164,30 @@ namespace Service.Services
             await _messageRepo.UpdateAsync(message);
         }
 
-        public async Task CloseAsync(string userId, int id)
+        public async Task CloseAsync(int id)
         {
-            var message = await FindMineAsync(userId, id);
+            var message = await _messageRepo.GetByIdAsync(id);
+            if (message is null)
+            {
+                throw new NotFoundException();
+            }
+
             if (message.IsClosed)
             {
                 return;
             }
 
-            if (!message.IsAnswered)
-            {
-                throw new BadRequestException("You can end the chat after support replies.");
-            }
-
+            // Cavabsız bağlananda da "new" siyahısından və admin bildirişlərindən çıxır
             message.IsClosed = true;
             message.ClosedAt = DateTime.UtcNow;
+            message.IsAnswered = true;
             await _messageRepo.UpdateAsync(message);
+
+            if (!string.IsNullOrEmpty(message.UserId))
+            {
+                await _notificationService.AddAsync(message.UserId, NotificationKind.Shop, "Support ended the chat.",
+                    $"Your conversation about {message.Topic.ToLowerInvariant()} was closed. You can write a new message anytime.", "/Profile#messages");
+            }
         }
 
         // Yalnız öz mesajı: başqasınınkı "tapılmadı" kimi görünür

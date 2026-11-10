@@ -16,8 +16,8 @@ namespace Service.Helpers.DTOs.Contact
 
         // Davam edən yazışma: cavabdan sonrakı yazılar (müştəri və support növbə ilə)
         public List<ContactEntryDto> Entries { get; set; } = new();
-        public bool IsClosed { get; set; }              // müştəri "söhbəti bitir" basıb
+        public bool IsClosed { get; set; }              // Admin/Support söhbəti bitirib
         public DateTime? ClosedAt { get; set; }
-        public bool CanFollowUp { get; set; }           // müştəri yenidən yaza və ya söhbəti bitirə bilər
+        public bool CanFollowUp { get; set; }           // müştəri yenidən yaza bilər
     }
 }

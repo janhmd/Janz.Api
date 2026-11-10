@@ -31,6 +31,14 @@ namespace Janz.Api.Controllers.Admin
             return Ok(await _contactService.GetByIdAsync(id));
         }
 
+        // Söhbəti yalnız işçi (Admin/Support) bitirir
+        [HttpPost("{id:int}/close")]
+        public async Task<IActionResult> Close([FromRoute] int id)
+        {
+            await _contactService.CloseAsync(id);
+            return NoContent();
+        }
+
         [HttpPost("{id:int}/reply")]
         public async Task<IActionResult> Reply([FromRoute] int id, [FromBody] ReplyContactMessageDto request)
         {

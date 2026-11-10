@@ -18,7 +18,7 @@ namespace Service.Services.Interfaces
         // Müştəri: cavab kömək etməyibsə yenidən yazır (mesaj yenə support-un növbəsinə düşür)
         Task FollowUpAsync(string userId, int id, FollowUpContactMessageDto model);
 
-        // Müştəri: "söhbəti bitir". Bağlanandan sonra heç kim yeni yazı əlavə edə bilməz
-        Task CloseAsync(string userId, int id);
+        // Admin və Support: söhbəti bitirir (müştəri bitirə bilməz). Bağlanandan sonra heç kim yeni yazı əlavə edə bilməz
+        Task CloseAsync(int id);
     }
 }

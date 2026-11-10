@@ -1,5 +1,6 @@
 using Domain.Constants;
 using Domain.Entities;
+using Domain.Enums;
 using FluentValidation;
 using Repository.Repositories.Interfaces;
 using Service.Helpers;

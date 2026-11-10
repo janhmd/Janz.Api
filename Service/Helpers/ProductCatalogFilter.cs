@@ -71,8 +71,19 @@ namespace Service.Helpers
                 "rating" => query.OrderByDescending(m => m.Rating ?? 0).ThenByDescending(m => m.ReviewCount),
                 "popular" => query.OrderByDescending(m => m.ReviewCount),
                 "new" => query.OrderByDescending(m => m.CreatedAt),
-                _ => query
+                // Axtarışda ad üzrə uyğunluq ön plana çıxır (OrderBy sabitdir, qalanların sırası dəyişmir)
+                _ => string.IsNullOrWhiteSpace(filter.Q) ? query : query.OrderBy(m => Relevance(m, filter.Q.Trim()))
             };
+        }
+
+        // 0: ad sözlə başlayır, 1: adın bir sözü başlayır, 2: adda var, 3: teq və ya kateqoriyada var, 4: təsvir, dad və s.
+        private static int Relevance(ProductDto m, string q)
+        {
+            if (m.Name.StartsWith(q, StringComparison.OrdinalIgnoreCase)) return 0;
+            if (m.Name.Split(' ', '-', StringSplitOptions.RemoveEmptyEntries).Any(w => w.StartsWith(q, StringComparison.OrdinalIgnoreCase))) return 1;
+            if (Has(m.Name, q)) return 2;
+            if (m.Tags.Any(t => Has(t.Name, q)) || Has(m.CategoryName, q)) return 3;
+            return 4;
         }
 
         // 0-33 aşağı, 34-66 orta, 67-100 yüksək

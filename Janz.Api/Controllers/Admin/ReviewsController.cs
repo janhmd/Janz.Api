@@ -5,10 +5,10 @@ using Service.Services.Interfaces;
 
 namespace Janz.Api.Controllers.Admin
 {
-    // Admin panel: məhsul və mağaza rəyləri (Editor da idarə edir). Gizlədilən rəy saytda görünmür və reytinqə daxil olmur
+    // Admin panel: məhsul və mağaza rəyləri. Gizlədilən rəy saytda görünmür və reytinqə daxil olmur
     [Route("api/admin/reviews")]
     [ApiController]
-    [Authorize(Roles = Roles.SuperAdmin + "," + Roles.Admin + "," + Roles.Editor)]
+    [Authorize(Roles = Roles.SuperAdmin + "," + Roles.Admin)]
     public class ReviewsController : ControllerBase
     {
         private readonly IReviewService _reviewService;

@@ -9,7 +9,7 @@ namespace Janz.Api.Controllers.Admin
     // Admin panel: mətn səhifələri
     [Route("api/admin/pages")]
     [ApiController]
-    [Authorize(Roles = Roles.SuperAdmin + "," + Roles.Admin + "," + Roles.Editor)]
+    [Authorize(Roles = Roles.SuperAdmin + "," + Roles.Admin)]
     public class PagesController : ControllerBase
     {
         private readonly IPageService _pageService;

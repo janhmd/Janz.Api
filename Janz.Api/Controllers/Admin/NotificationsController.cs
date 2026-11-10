@@ -8,7 +8,7 @@ namespace Janz.Api.Controllers.Admin
     // Admin panelin bildiriş mərkəzi: hər işçi yalnız rolunun görə biləcəyi bildirişləri alır
     [Route("api/admin/notifications")]
     [ApiController]
-    [Authorize(Roles = Roles.SuperAdmin + "," + Roles.Admin + "," + Roles.Editor + "," + Roles.Support)]
+    [Authorize(Roles = Roles.SuperAdmin + "," + Roles.Admin + "," + Roles.Support)]
     public class NotificationsController : ControllerBase
     {
         private readonly IAdminNotificationService _notificationService;
@@ -24,7 +24,7 @@ namespace Janz.Api.Controllers.Admin
             var manager = User.IsInRole(Roles.SuperAdmin) || User.IsInRole(Roles.Admin);
             var types = new List<string>();
             if (manager || User.IsInRole(Roles.Support)) types.Add("order");
-            if (manager || User.IsInRole(Roles.Editor)) { types.Add("report"); types.Add("review"); }
+            if (manager) { types.Add("report"); types.Add("review"); }
             if (manager) types.Add("stock");
 
             return Ok(await _notificationService.GetAsync(types));

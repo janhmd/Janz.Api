@@ -9,7 +9,7 @@ namespace Janz.Api.Controllers.Admin
     // Admin panel: Community moderasiyası. Redaktor, Admin və SuperAdmin
     [Route("api/admin/community")]
     [ApiController]
-    [Authorize(Roles = Roles.SuperAdmin + "," + Roles.Admin + "," + Roles.Editor)]
+    [Authorize(Roles = Roles.SuperAdmin + "," + Roles.Admin)]
     public class CommunityController : ControllerBase
     {
         private readonly ICommunityAdminService _adminService;

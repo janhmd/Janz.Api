@@ -44,6 +44,7 @@ namespace Service
             services.AddScoped<IPageService, PageService>();
             services.AddScoped<ISettingService, SettingService>();
             services.AddScoped<IContactService, ContactService>();
+            services.AddScoped<ISiteTileService, SiteTileService>();
             services.AddHttpClient();
             services.AddValidatorsFromAssemblyContaining<RegisterDtoValidator>();
             return services;

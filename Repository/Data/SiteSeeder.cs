@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Repository.Data;
 
-// Boş bazada mətn səhifələri və əlaqə məlumatları başlanğıc dəyərlərlə yaranır, sonra admin paneldən dəyişir
+// Boş bazada mətn səhifələri, əlaqə məlumatları və şəkilli kartlar başlanğıc dəyərlərlə yaranır, sonra admin paneldən dəyişir
 public static class SiteSeeder
 {
     public static async Task SeedAsync(AppDbContext db)
@@ -63,6 +63,34 @@ public static class SiteSeeder
                 WhatsApp = "https://wa.me/994702175557",
                 Hours = "Every day 10:00–20:00"
             });
+        }
+
+        // Kartlar: indiki şəkil və videolar wwwroot-dadır, admin panel onları dəyişəndə yenisi /uploads altında saxlanır
+        if (!await db.SiteTiles.AnyAsync())
+        {
+            db.SiteTiles.AddRange(
+                    new SiteTile { Placement = "home", SortOrder = 1, Title = "Coffee", Link = "/Products", ImagePath = "/images/tiles/espresso.jpg", VideoPath = "/videos/espresso.mp4" },
+                    new SiteTile { Placement = "home", SortOrder = 2, Title = "Syrups", Link = "/Products/Chocolate", ImagePath = "/images/tiles/choc-syrup.jpg", VideoPath = "/videos/choc-syrup.mp4" },
+                    new SiteTile { Placement = "home", SortOrder = 3, Title = "Tea", Link = "/Products/Tea", ImagePath = "/images/tiles/tea.jpg", VideoPath = "/videos/tea.mp4" },
+                    new SiteTile { Placement = "coffee", SortOrder = 1, Title = "Coffee for espresso", Link = "?use=espresso", ImagePath = "/images/tiles/espresso.jpg", VideoPath = "/videos/espresso.mp4" },
+                    new SiteTile { Placement = "coffee", SortOrder = 2, Title = "Coffee for filter", Link = "?use=filter", ImagePath = "/images/tiles/filter.jpg", VideoPath = "/videos/filter.mp4" },
+                    new SiteTile { Placement = "coffee", SortOrder = 3, Title = "Capsules", Link = "?format=capsules", ImagePath = "/images/tiles/capsules.jpg", VideoPath = "/videos/capsules.mp4" },
+                    new SiteTile { Placement = "coffee", SortOrder = 4, Title = "Drip bags", Link = "?format=drip", ImagePath = "/images/tiles/drip.jpg", VideoPath = "/videos/drip.mp4" },
+                    new SiteTile { Placement = "coffee", SortOrder = 5, Title = "Drinks in cans", Link = "?format=cans", ImagePath = "/images/tiles/cans.jpg", VideoPath = "/videos/cans.mp4" },
+                    new SiteTile { Placement = "coffee", SortOrder = 6, Title = "Coffee concentrate", Link = "?format=concentrate", ImagePath = "/images/tiles/concentrate.jpg", VideoPath = "/videos/concentrate.mp4" },
+                    new SiteTile { Placement = "coffee", SortOrder = 7, Title = "Instant specialty", Link = "?format=instant", ImagePath = "/images/tiles/instant.jpg", VideoPath = "/videos/instant.mp4" },
+                    new SiteTile { Placement = "tea", SortOrder = 1, Title = "Green tea", Link = "?tag=green-tea", ImagePath = "/images/tiles/tea-green.jpg", VideoPath = "/videos/tea-green.mp4" },
+                    new SiteTile { Placement = "tea", SortOrder = 2, Title = "Black tea", Link = "?tag=black-tea", ImagePath = "/images/tiles/tea-black.jpg", VideoPath = "/videos/tea-black.mp4" },
+                    new SiteTile { Placement = "tea", SortOrder = 3, Title = "Oolong", Link = "?tag=oolong", ImagePath = "/images/tiles/tea-oolong.jpg", VideoPath = "/videos/tea-oolong.mp4" },
+                    new SiteTile { Placement = "tea", SortOrder = 4, Title = "White tea", Link = "?tag=white-tea", ImagePath = "/images/tiles/tea-white.jpg", VideoPath = "/videos/tea-white.mp4" },
+                    new SiteTile { Placement = "tea", SortOrder = 5, Title = "Pu-erh", Link = "?tag=pu-erh", ImagePath = "/images/tiles/tea-puerh.jpg", VideoPath = "/videos/tea-puerh.mp4" },
+                    new SiteTile { Placement = "chocolate", SortOrder = 1, Title = "Chocolate bars", Link = "?tag=chocolate-bars", ImagePath = "/images/tiles/choc-bars.jpg", VideoPath = "/videos/choc-bars.mp4" },
+                    new SiteTile { Placement = "chocolate", SortOrder = 2, Title = "Chocolate shavings", Link = "?tag=chocolate-shavings", ImagePath = "/images/tiles/choc-shavings.jpg", VideoPath = "/videos/choc-shavings.mp4" },
+                    new SiteTile { Placement = "chocolate", SortOrder = 3, Title = "Syrups", Link = "?tag=syrups", ImagePath = "/images/tiles/choc-syrup.jpg", VideoPath = "/videos/choc-syrup.mp4" },
+                    new SiteTile { Placement = "chocolate", SortOrder = 4, Title = "Dry syrups", Link = "?tag=dry-syrups", ImagePath = "/images/tiles/choc-dry-syrup.jpg", VideoPath = "/videos/choc-dry-syrup.mp4" },
+                    new SiteTile { Placement = "chocolate", SortOrder = 5, Title = "Dry bases", Link = "?tag=dry-bases", ImagePath = "/images/tiles/choc-dry-base.jpg", VideoPath = "/videos/choc-dry-base.mp4" },
+                    new SiteTile { Placement = "sets", SortOrder = 1, Title = "Sample boxes", Link = "?tag=sample-boxes", ImagePath = "/images/tiles/set-samples.jpg", VideoPath = "/videos/set-samples.mp4" },
+                    new SiteTile { Placement = "sets", SortOrder = 2, Title = "Gift sets", Link = "?tag=gift-sets", ImagePath = "/images/tiles/set-gifts.jpg", VideoPath = "/videos/set-gifts.mp4" });
         }
 
         await db.SaveChangesAsync();

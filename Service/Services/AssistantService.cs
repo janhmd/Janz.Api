@@ -37,14 +37,17 @@ namespace Service.Services
         }
 
         private readonly IBaseRepository<Product> _productRepo;
+        private readonly IBaseRepository<ProductVariant> _variantRepo;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly IConfiguration _configuration;
 
         public AssistantService(IBaseRepository<Product> productRepo,
+                                IBaseRepository<ProductVariant> variantRepo,
                                 IHttpClientFactory httpClientFactory,
                                 IConfiguration configuration)
         {
             _productRepo = productRepo;
+            _variantRepo = variantRepo;
             _httpClientFactory = httpClientFactory;
             _configuration = configuration;
         }
@@ -57,10 +60,14 @@ namespace Service.Services
                 throw new BadRequestException("Write a question up to 300 characters.");
             }
 
+            // Variantı olan məhsulun real qiyməti variantlardadır (ən ucuzu), Product.Price köhnə qala bilər
+            var variants = (await _variantRepo.GetAllAsync()).ToLookup(v => v.ProductId);
             var products = (await _productRepo.GetAllAsync())
                 .Where(p => p.IsVisible)
                 .Take(60)
-                .Select(p => $"{p.Name} ({p.Price} AZN)");
+                .Select(p => variants[p.Id].Any()
+                    ? $"{p.Name} (from {variants[p.Id].Min(v => v.Price)} AZN)"
+                    : $"{p.Name} ({p.Price} AZN)");
             var instruction = Instruction + "\n" + LanguageRule(model.Language) + "\nProducts: " + string.Join("; ", products);
 
             var answer = await Gemini.AskAsync(_httpClientFactory, _configuration, instruction, question);

@@ -19,10 +19,14 @@ namespace Janz.Tests.Services
             products.Rows.Add(new Product { Id = 1, Name = "Ethiopia", Price = 29.9m, IsVisible = true });
             products.Rows.Add(new Product { Id = 2, Name = "Hidden roast", Price = 10m, IsVisible = false });
 
+            var variants = new FakeRepository<ProductVariant>();
+            variants.Rows.Add(new ProductVariant { Id = 1, ProductId = 1, Price = 24.5m });
+            variants.Rows.Add(new ProductVariant { Id = 2, ProductId = 1, Price = 79m });
+
             var settings = new Dictionary<string, string?> { ["Gemini:ApiKey"] = apiKey };
             var configuration = new ConfigurationBuilder().AddInMemoryCollection(settings).Build();
 
-            return new AssistantService(products, http, configuration);
+            return new AssistantService(products, variants, http, configuration);
         }
 
         [Fact]
@@ -120,6 +124,17 @@ namespace Janz.Tests.Services
             await Create(http, "key").AskAsync(new AskAssistantDto { Question = "Qehve" });
 
             Assert.Contains("never by its language", http.LastRequestBody!);
+        }
+
+        [Fact]
+        public async Task Ask_UsesTheCheapestVariantPrice_NotTheStaleProductPrice()
+        {
+            var http = new FakeHttpClientFactory(HttpStatusCode.OK, GeminiAnswer);
+
+            await Create(http, "key").AskAsync(new AskAssistantDto { Question = "How much is Ethiopia?" });
+
+            Assert.Contains("Ethiopia (from 24.5 AZN)", http.LastRequestBody!);
+            Assert.DoesNotContain("29.9", http.LastRequestBody!);
         }
     }
 }

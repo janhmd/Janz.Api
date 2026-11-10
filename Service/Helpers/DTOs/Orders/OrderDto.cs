@@ -11,6 +11,12 @@ namespace Service.Helpers.DTOs.Orders
         public string? LevelName { get; set; }
         public decimal Discount { get; set; }
         public decimal BalanceUsed { get; set; }
+
+        // Çatdırılma haqqı (Total-a daxildir)
+        public decimal DeliveryFee { get; set; }
+
+        // Yalnız sifariş yaranan an: kartla ödəniləcəksə Stripe səhifəsinin ünvanı. Doludursa müştəri ora yönləndirilir
+        public string? PaymentUrl { get; set; }
         public bool IsPaid { get; set; }
         public DateTime? PaidAt { get; set; }
         public DateTime CreatedAt { get; set; }

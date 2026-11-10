@@ -116,6 +116,7 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddRepositoryLayer();
 builder.Services.AddServiceLayer();
+builder.Services.AddHostedService<Janz.Api.BackgroundServices.AbandonedOrderCleaner>();
 
 var mvcOrigins = builder.Configuration.GetSection("Frontend:MvcOrigins").Get<string[]>()
     ?? Array.Empty<string>();

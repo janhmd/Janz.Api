@@ -36,5 +36,10 @@ namespace Repository.Results
         string DeliveryCity,
         string DeliveryPostalCode,
         string? CouponCode,
-        bool UseBalance);
+        bool UseBalance,
+        // Çatdırılma haqqı və bu məbləğdən (endirimdən sonra məhsulların cəmi) yuxarı pulsuzluq. FreeDeliveryFrom 0-dırsa həmişə haqq var
+        decimal DeliveryFee = 0,
+        decimal FreeDeliveryFrom = 0,
+        // Kartla ödəniləcək: balans hamısını örtmürsə sifariş "ödənişi gözləyir" olur və səbət boşalmır
+        bool AwaitCard = false);
 }

@@ -14,6 +14,7 @@ namespace Domain.Configurations
             builder.Property(m => m.LevelName).HasMaxLength(50);
             builder.Property(m => m.Discount).HasPrecision(18, 2);
             builder.Property(m => m.BalanceUsed).HasPrecision(18, 2);
+            builder.Property(m => m.DeliveryFee).HasPrecision(18, 2);
             builder.Property(m => m.PaymentSessionId).HasMaxLength(200);
 
             // Uzunluqlar AddressConfiguration ilə eynidir (ünvan olduğu kimi köçürülür)
@@ -25,6 +26,10 @@ namespace Domain.Configurations
             builder.Property(m => m.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
 
             builder.HasIndex(m => m.UserId);
+
+            // Ödənişi gözləyən sifarişlər heç yerdə görünmür (siyahılar, admin, hesablamalar). Onlara yalnız ödəniş
+            // servisi IgnoreQueryFilters ilə baxır
+            builder.HasQueryFilter(m => !m.IsAwaitingPayment);
 
             builder.HasOne(m => m.User)
                 .WithMany()

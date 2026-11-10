@@ -23,5 +23,13 @@ namespace Janz.Tests.Fakes
         public Task<Order?> GetByIdForAdminAsync(int id) => throw new NotSupportedException();
 
         public Task<bool> ChangeStatusAsync(int id, OrderStatus from, OrderStatus to) => throw new NotSupportedException();
+
+        public Task<Order?> GetAnyByIdAsync(int id) => throw new NotSupportedException();
+
+        public Task<IReadOnlyList<Order>> GetAwaitingAsync(string? userId, DateTime? createdBefore) => throw new NotSupportedException();
+
+        public Task<bool> FinalizePaidAsync(int id) => throw new NotSupportedException();
+
+        public Task<bool> DiscardAsync(int id) => throw new NotSupportedException();
     }
 }

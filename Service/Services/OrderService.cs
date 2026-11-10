@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Repository.Repositories.Interfaces;
 using Repository.Results;
 using Service.Helpers;
+using Microsoft.Extensions.Configuration;
 using Service.Helpers.DTOs.Orders;
 using Service.Helpers.DTOs.Refunds;
 using Service.Helpers.Exceptions;
@@ -23,6 +24,8 @@ namespace Service.Services
         private readonly INotificationService _notificationService;
         private readonly IRefundRepository _refundRepo;
         private readonly ILogger<OrderService> _logger;
+        private readonly IPaymentService _paymentService;
+        private readonly DeliveryRules _delivery;
 
         public OrderService(IOrderRepository orderRepo,
                             IAddressRepository addressRepo,
@@ -30,7 +33,9 @@ namespace Service.Services
                             IValidator<UpdateOrderStatusDto> statusValidator,
                             INotificationService notificationService,
                             IRefundRepository refundRepo,
-                            ILogger<OrderService> logger)
+                            ILogger<OrderService> logger,
+                            IPaymentService paymentService,
+                            IConfiguration configuration)
         {
             _orderRepo = orderRepo;
             _addressRepo = addressRepo;
@@ -39,6 +44,8 @@ namespace Service.Services
             _notificationService = notificationService;
             _refundRepo = refundRepo;
             _logger = logger;
+            _paymentService = paymentService;
+            _delivery = DeliveryRules.From(configuration);
         }
 
         public async Task<IEnumerable<OrderDto>> GetAllAsync(string userId)
@@ -84,8 +91,19 @@ namespace Service.Services
                 return ServiceResult<OrderDto>.Fail("Choose a delivery address.");
             }
 
+            // Çatdırılmada ödəniş yalnız Bakıda (Janz kuryeri). Regionlara Azərpoçt göndərir: pul öncədən kartla alınır
+            var cash = string.Equals(model.PaymentMethod, "Cash", StringComparison.OrdinalIgnoreCase);
+            if (cash && !DeliveryRules.IsCashAllowed(address.City))
+            {
+                return ServiceResult<OrderDto>.Fail("Pay on delivery is only available in Baku. Please pay by card.");
+            }
+
+            // Əvvəlki yarımçıq kart ödənişi qalıbsa həll olunur (ödənibsə sifariş yaranır, yoxsa silinir və stok qayıdır)
+            await _paymentService.SettleAwaitingAsync(userId);
+
             var couponCode = string.IsNullOrWhiteSpace(model.CouponCode) ? null : model.CouponCode.Trim().ToUpperInvariant();
-            var plan = new OrderPlan(userId, address.FullName, address.Phone, address.Line, address.City, address.PostalCode, couponCode, model.UseBalance);
+            var plan = new OrderPlan(userId, address.FullName, address.Phone, address.Line, address.City, address.PostalCode, couponCode, model.UseBalance,
+                _delivery.Fee, _delivery.FreeFrom, AwaitCard: !cash);
 
             // Stok, sifariş və səbət bir tranzaksiyada dəyişir (OrderRepository.PlaceAsync)
             var result = await _orderRepo.PlaceAsync(plan);
@@ -93,6 +111,23 @@ namespace Service.Services
             if (result.Outcome != OrderOutcome.Success)
             {
                 _logger.LogWarning("Order not placed for user {UserId}: {Outcome}", userId, result.Outcome);
+            }
+
+            // Kartla ödəniləcək sifarişdə pul alınana qədər sifariş görünmür: Stripe səhifəsi hazırlanır.
+            // Alınmasa sifariş silinir və məhsullar səbətdə qalır
+            if (result.Outcome == OrderOutcome.Success && result.Order!.IsAwaitingPayment)
+            {
+                var session = await _paymentService.CreateSessionAsync(userId, result.Order.Id);
+                if (!session.IsSuccess)
+                {
+                    await _orderRepo.DiscardAsync(result.Order.Id);
+                    return ServiceResult<OrderDto>.Fail(session.Errors);
+                }
+
+                _logger.LogInformation("Order #{OrderId} waits for the card payment of user {UserId}, total {Total}", result.Order.Id, userId, result.Order.Total);
+                var awaiting = ToDto(result.Order, result.Order.Items);
+                awaiting.PaymentUrl = session.Data!.Url;
+                return ServiceResult<OrderDto>.Ok(awaiting);
             }
 
             if (result.Outcome == OrderOutcome.Success)
@@ -228,6 +263,7 @@ namespace Service.Services
             dto.LevelName = order.LevelName;
             dto.Discount = order.Discount;
             dto.BalanceUsed = order.BalanceUsed;
+            dto.DeliveryFee = order.DeliveryFee;
             dto.IsPaid = order.IsPaid;
             dto.PaidAt = order.PaidAt;
             dto.CreatedAt = order.CreatedAt;

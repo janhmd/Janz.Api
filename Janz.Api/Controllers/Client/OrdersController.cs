@@ -1,6 +1,8 @@
 ﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
+using Service.Helpers;
 using Service.Helpers.DTOs.Orders;
 using Service.Helpers.DTOs.Payments;
 using Service.Helpers.DTOs.Refunds;
@@ -17,12 +19,14 @@ namespace Janz.Api.Controllers.Client
         private readonly IOrderService _orderService;
         private readonly IPaymentService _paymentService;
         private readonly IRefundService _refundService;
+        private readonly DeliveryRules _delivery;
 
-        public OrdersController(IOrderService orderService, IPaymentService paymentService, IRefundService refundService)
+        public OrdersController(IOrderService orderService, IPaymentService paymentService, IRefundService refundService, IConfiguration configuration)
         {
             _orderService = orderService;
             _paymentService = paymentService;
             _refundService = refundService;
+            _delivery = DeliveryRules.From(configuration);
         }
 
         private string UserId
@@ -31,6 +35,14 @@ namespace Janz.Api.Controllers.Client
             {
                 return User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
             }
+        }
+
+        // Səbət səhifəsi üçün çatdırılma haqqı və pulsuz çatdırılma həddi
+        [HttpGet("delivery")]
+        [AllowAnonymous]
+        public IActionResult GetDelivery()
+        {
+            return Ok(new DeliveryRuleDto { Fee = _delivery.Fee, FreeFrom = _delivery.FreeFrom });
         }
 
         [HttpGet]
@@ -65,6 +77,13 @@ namespace Janz.Api.Controllers.Client
         public async Task<IActionResult> ConfirmPayment(int id, [FromBody] ConfirmPaymentDto model)
         {
             return ToResponse(await _paymentService.ConfirmAsync(UserId, id, model));
+        }
+
+        // Kart ödənişi ləğv edildi/uğursuz oldu: sifariş silinir, məhsullar səbətdə qalır (ödənibsə sifariş yaranır)
+        [HttpPost("{id:int}/abort-payment")]
+        public async Task<IActionResult> AbortPayment(int id)
+        {
+            return ToResponse(await _paymentService.AbortAsync(UserId, id));
         }
 
         // Çatdırılmış sifariş üçün pulu geri istəmək: Admin və ya Support qəbul edəndə məbləğ balansa qayıdır

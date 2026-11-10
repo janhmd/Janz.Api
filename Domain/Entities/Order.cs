@@ -16,6 +16,13 @@ namespace Domain.Entities
         public string? LevelName { get; set; }              // endirim səviyyədən gəlibsə onun adı
         public decimal Discount { get; set; }
 
+        // Çatdırılma haqqı: Total-a daxildir (məhsullar - endirim + çatdırılma). Müəyyən məbləğdən yuxarı pulsuzdur
+        public decimal DeliveryFee { get; set; }
+
+        // Kartla ödəniş başladılıb, amma pul hələ alınmayıb: sifariş müştəriyə və adminə görünmür (query filter), stok ayrılıb,
+        // səbət toxunulmayıb. Ödəniş uğurlu olanda sifariş həqiqi olur, uğursuz/ləğv/vaxt bitəndə tam silinir
+        public bool IsAwaitingPayment { get; set; }
+
         // Daxili hesabdan ödənən hissə. Kartla və ya çatdırılmada qalan məbləğ (Total - BalanceUsed) ödənir
         public decimal BalanceUsed { get; set; }
 

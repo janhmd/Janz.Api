@@ -24,5 +24,18 @@ namespace Repository.Repositories.Interfaces
         // Statusu dəyişir, yalnız sifariş hələ "from" statusundadırsa (eyni anda iki işçi dəyişsə ikincisi rədd olunur).
         // Ləğv olunanda məhsullar stoka qaytarılır. Hamısı bir tranzaksiyadadır
         Task<bool> ChangeStatusAsync(int id, OrderStatus from, OrderStatus to);
+
+        // Ödəniş servisi üçün: "ödənişi gözləyən" sifarişlər də tapılır (query filter söndürülür). İzlənir, dəyişdirmək olar
+        Task<Order?> GetAnyByIdAsync(int id);
+
+        // Ödənişi gözləyən sifarişlər: istifadəçinin öz sifarişləri və/və ya müəyyən vaxtdan əvvəl yaranmışlar
+        Task<IReadOnlyList<Order>> GetAwaitingAsync(string? userId, DateTime? createdBefore);
+
+        // Kart ödənişi alındı: sifariş həqiqi olur (IsPaid), sifarişə düşən məhsullar səbətdən çıxır. Artıq həqiqidirsə false
+        Task<bool> FinalizePaidAsync(int id);
+
+        // Ödəniş alınmadı: sifariş tam silinir, stok, promo kod və balans qaytarılır, səbət olduğu kimi qalır.
+        // Sifariş gözləmirsə və ya ödənibsə false (heç nə silinmir)
+        Task<bool> DiscardAsync(int id);
     }
 }

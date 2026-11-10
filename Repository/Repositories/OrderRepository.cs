@@ -127,6 +127,118 @@ namespace Repository.Repositories
             return true;
         }
 
+        public async Task<Order?> GetAnyByIdAsync(int id)
+        {
+            return await _dbSet
+                    .IgnoreQueryFilters()
+                    .FirstOrDefaultAsync(m => m.Id == id);
+        }
+
+        public async Task<IReadOnlyList<Order>> GetAwaitingAsync(string? userId, DateTime? createdBefore)
+        {
+            var query = _dbSet
+                    .IgnoreQueryFilters()
+                    .AsNoTracking()
+                    .Where(m => m.IsAwaitingPayment);
+
+            if (userId is not null)
+            {
+                query = query.Where(m => m.UserId == userId);
+            }
+
+            if (createdBefore is not null)
+            {
+                query = query.Where(m => m.CreatedAt < createdBefore);
+            }
+
+            return await query.ToListAsync();
+        }
+
+        public async Task<bool> FinalizePaidAsync(int id)
+        {
+            _dbContext.ChangeTracker.Clear();
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync();
+
+            // Şərt bazada yoxlanılır: sifariş artıq həqiqi olubsa (ya da silinibsə) heç nə dəyişmir
+            var changed = await _dbSet
+                    .IgnoreQueryFilters()
+                    .Where(m => m.Id == id && m.IsAwaitingPayment)
+                    .ExecuteUpdateAsync(s => s
+                        .SetProperty(m => m.IsAwaitingPayment, false)
+                        .SetProperty(m => m.IsPaid, true)
+                        .SetProperty(m => m.PaidAt, DateTime.UtcNow));
+
+            if (changed == 0)
+            {
+                await transaction.RollbackAsync();
+                return false;
+            }
+
+            // Sifarişə düşən məhsullar səbətdən çıxır (ödəniş vaxtı səbətə əlavə olunanlar qalır)
+            var order = await _dbSet.AsNoTracking().Include(m => m.Items).FirstAsync(m => m.Id == id);
+            var cartItems = await _dbContext.CartItems.Where(m => m.UserId == order.UserId).ToListAsync();
+            var ordered = cartItems
+                    .Where(c => order.Items.Any(i => i.ProductId == c.ProductId && i.VariantId == c.VariantId))
+                    .ToList();
+            _dbContext.CartItems.RemoveRange(ordered);
+            await _dbContext.SaveChangesAsync();
+
+            await transaction.CommitAsync();
+            return true;
+        }
+
+        public async Task<bool> DiscardAsync(int id)
+        {
+            _dbContext.ChangeTracker.Clear();
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync();
+
+            var order = await _dbSet
+                    .IgnoreQueryFilters()
+                    .Include(m => m.Items)
+                    .FirstOrDefaultAsync(m => m.Id == id && m.IsAwaitingPayment && !m.IsPaid);
+
+            if (order is null)
+            {
+                await transaction.RollbackAsync();
+                return false;
+            }
+
+            // Ayrılmış stok qayıdır
+            foreach (var item in order.Items)
+            {
+                await _dbContext.Products
+                        .Where(p => p.Id == item.ProductId)
+                        .ExecuteUpdateAsync(s => s.SetProperty(p => p.Stock, p => p.Stock + item.Quantity));
+
+                if (item.VariantId is int variantId)
+                {
+                    await _dbContext.ProductVariants
+                            .Where(v => v.Id == variantId)
+                            .ExecuteUpdateAsync(s => s.SetProperty(v => v.Stock, v => v.Stock + item.Quantity));
+                }
+            }
+
+            // Promo kod yenidən istifadə oluna bilər
+            if (order.CouponCode is not null)
+            {
+                await _dbContext.Coupons
+                        .Where(m => m.Code == order.CouponCode && m.UsedCount > 0)
+                        .ExecuteUpdateAsync(s => s.SetProperty(m => m.UsedCount, m => m.UsedCount - 1));
+            }
+
+            // Balansdan tutulan pul qayıdır: sifarişə yazılan hərəkət silinir, tarixçədə iz qalmır
+            await _dbContext.BalanceTransactions
+                    .Where(m => m.OrderId == id && m.Type == BalanceTransactionType.Order)
+                    .ExecuteDeleteAsync();
+
+            // Sifariş və sətirləri tam silinir (sətirlər cascade ilə)
+            _dbSet.Remove(order);
+            await _dbContext.SaveChangesAsync();
+
+            await transaction.CommitAsync();
+            return true;
+        }
+
         public async Task<OrderPlaceResult> PlaceAsync(OrderPlan plan)
         {
             _dbContext.ChangeTracker.Clear();
@@ -256,6 +368,10 @@ namespace Repository.Repositories
 
             order.Total = total - order.Discount;
 
+            // Çatdırılma haqqı endirimdən sonrakı məbləğə görə: müəyyən həddən yuxarı pulsuz
+            order.DeliveryFee = plan.FreeDeliveryFrom > 0 && order.Total >= plan.FreeDeliveryFrom ? 0 : plan.DeliveryFee;
+            order.Total += order.DeliveryFee;
+
             // Balansdan ödəniş: balans bu tranzaksiyada kilidlə oxunur ki, eyni pul iki sifarişə xərclənməsin
             if (plan.UseBalance && order.Total > 0)
             {
@@ -273,8 +389,15 @@ namespace Repository.Repositories
                 }
             }
 
+            // Kartla ödəniləcək hissə qalırsa pul alınana qədər sifariş "gözləyir": səbət toxunulmur ki, ödəniş alınmasa
+            // müştəri məhsulları səbətdə tapıb yenidən ödəsin
+            order.IsAwaitingPayment = plan.AwaitCard && !order.IsPaid;
+
             _dbContext.Orders.Add(order);
-            _dbContext.CartItems.RemoveRange(cartItems);
+            if (!order.IsAwaitingPayment)
+            {
+                _dbContext.CartItems.RemoveRange(cartItems);
+            }
 
             await _dbContext.SaveChangesAsync();
 

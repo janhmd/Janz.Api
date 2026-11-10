@@ -10,5 +10,9 @@ namespace Service.Helpers.DTOs.Orders
 
         // Daxili hesabdakı puldan istifadə et (çatarsa sifariş tam ödənir, çatmazsa qalanı kartla və ya çatdırılmada)
         public bool UseBalance { get; set; }
+
+        // "Card": pul sifariş yaranmazdan əvvəl Stripe-da alınır (alınmasa sifariş yaranmır, səbət qalır).
+        // "Cash": çatdırılmada kuryerə ödənir, yalnız Bakıda. Boşdursa "Card"
+        public string? PaymentMethod { get; set; }
     }
 }
